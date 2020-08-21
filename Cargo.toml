@@ -1,0 +1,24 @@
+[package]
+name = "purify-cli"
+description = "purify-cli"
+version = "0.0.1"
+authors = ["Sven Assmann <sven.assmann.it@gmail.com>"]
+edition = "2018"
+license = "GPL-3.0-only"
+readme = "README.md"
+keywords = ["commandline"]
+categories = ["command-line-utilities"]
+repository = "https://github.com/sassman/purify-cli-rs"
+exclude = [".ci/*", ".gitignore", ".travis.yml"]
+
+[badges]
+travis-ci = { repository = "sassman/purify-cli-rs", branch = "master" }
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+clap = "2.33"
+walkdir = "2.3.1"
+
+[[bin]]
+name = "purify"
+path = "src/main.rs"
