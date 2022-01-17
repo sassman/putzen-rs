@@ -1,8 +1,18 @@
-use clap::{crate_version, App, AppSettings, Arg};
-use std::io::{Result};
+use std::convert::TryFrom;
+use std::io::Result;
 use std::path::Path;
-use walkdir::{WalkDir};
-use std::thread;
+
+use clap::{crate_version, App, AppSettings, Arg};
+
+mod lib;
+
+use lib::*;
+
+/// all supported this to clean up
+static FOLDER_TO_CLEANUP: [FileToFolderMatch; 2] = [
+    FileToFolderMatch::new("Cargo.toml", "target"),
+    FileToFolderMatch::new("package.json", "node_modules"),
+];
 
 fn main() -> Result<()> {
     let matches = App::new("purify-cli")
@@ -44,23 +54,47 @@ fn main() -> Result<()> {
     let args = PurifyArgs {
         dry_run: matches.is_present("dry"),
         follow: matches.is_present("follow"),
-        not_skip_dot_folder: matches.is_present("not_skip_dot_folder")
+        not_skip_dot_folder: matches.is_present("not_skip_dot_folder"),
     };
-    let mut targets: Vec<PurifyTarget> = Vec::new();
-    targets.push(PurifyTarget {
-        file_to_check: "Cargo.toml".to_owned(),
-        folder_to_remove: "target".to_owned(),
-    });
-    targets.push(PurifyTarget {
-        file_to_check: "package.json".to_owned(),
-        folder_to_remove: "node_modules".to_owned(),
-    });
-    let folder = Path::new(matches.value_of("folder").unwrap());
-    clean_folder(
-        folder,
-        &args,
-        &targets,
-    )
+
+    let folder = matches
+        .value_of("folder")
+        .map(|p| Path::new(p).to_path_buf())
+        .unwrap();
+
+    visit_path(&folder, &args, &FOLDER_TO_CLEANUP)
+
+    // clean_folder(&folder, &args, &FOLDER_TO_CLEANUP)
+}
+
+fn visit_path(
+    path: impl AsRef<Path>,
+    args: &PurifyArgs,
+    to_clean: &[FileToFolderMatch; 2],
+) -> Result<()> {
+    'folders: for folder in std::fs::read_dir(path.as_ref())?
+        .into_iter()
+        .filter(|e| e.is_ok())
+        .map(|e| Folder::try_from(e.unwrap()))
+        .filter(|f| f.is_ok())
+        .map(|f| f.unwrap())
+    {
+        for rule in to_clean {
+            if args.dry_run {
+                if folder.accept(rule).is_ok() {
+                    continue 'folders;
+                }
+            } else {
+                let rule = DryRun::wrap(rule);
+                if folder.accept(&rule).is_ok() {
+                    continue 'folders;
+                }
+            }
+        }
+        visit_path(&folder, &args, to_clean)?
+    }
+
+    Ok(())
 }
 
 struct PurifyArgs {
@@ -69,72 +103,69 @@ struct PurifyArgs {
     not_skip_dot_folder: bool,
 }
 
-struct PurifyTarget {
-    file_to_check: String,
-    folder_to_remove: String,
-}
+// fn clean_folder(
+//     folder: &impl AsRef<Path>,
+//     args: &PurifyArgs,
+//     targets: &[FileToFolderMatch],
+// ) -> Result<()> {
+//     for i in WalkDir::new(folder)
+//         .follow_links(args.follow)
+//         // .max_depth(1)
+//         .into_iter()
+//         .filter_map(|e| e.ok())
+//         .filter(|e| e.metadata().unwrap().is_dir())
+//         .map(|e| e.path())
+//         .cartesian_product(targets.iter())
+//         .map(|(f, t)| (Folder(f), t))
+//         .filter_map(|(e, t)| {
+//             if e.accept(t).is_ok() {
+//                 Some((e, t))
+//             } else {
+//                 None
+//             }
+//         })
+//     // .map(|path_to_remove| {
+//     //     if args.dry_run {
+//     //         remove_folder_dry(&path_to_remove)
+//     //     } else {
+//     //         remove_folder(&path_to_remove)
+//     //     }
+//     // })
+//     {
+//         println!(
+//             "{} in {} removed",
+//             i.1.folder_to_remove,
+//             i.0.as_ref().display()
+//         );
+//     }
+//
+//     dive_deeper(folder, args, &targets[..]).expect("something went wrong.");
+//
+//     Ok(())
+// }
 
-fn remove_folder(folder_to_remove: &Path) -> Result<()> {
-    println!("rm -rf {}", folder_to_remove.display());
-    Ok(())
-}
-
-fn remove_folder_dry(folder_to_remove: &Path) -> Result<()> {
-    println!("[dry-run] rm -rf {}", folder_to_remove.display());
-    Ok(())
-}
-
-fn clean_folder(folder: &Path, args: &PurifyArgs, targets: &Vec<PurifyTarget>) -> Result<()> {
-    for i in WalkDir::new(folder)
-        .follow_links(args.follow)
-        .max_depth(1)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.metadata().unwrap().is_file())
-        .zip(targets.iter())
-        .filter(|(e, t)| e.file_name().to_str().unwrap() == t.file_to_check)
-        .filter_map(|(e, t)| {
-            let path_to_remove = e.path().parent().unwrap().canonicalize().unwrap().join(&t.folder_to_remove);
-            if path_to_remove.exists() && path_to_remove.is_dir() {
-                Some(path_to_remove)
-            } else {
-                None
-            }
-        })
-        .map(|path_to_remove| {
-            if args.dry_run {
-                remove_folder_dry(&path_to_remove)
-            } else {
-                remove_folder(&path_to_remove)
-            }
-        })
-        {
-            match i {
-                Ok(_) => {},
-                Err(_) => panic!("One removal failed"),
-            }
-        };
-
-    // thread::spawn(|| {
-    dive_deeper(folder, args, targets).expect("something went wrong.");
-    // });
-
-    Ok(())
-}
-
-fn dive_deeper(folder: &Path, args: &PurifyArgs, targets: &Vec<PurifyTarget>) -> Result<()> {
-    let _results: Vec<Result<()>> = WalkDir::new(folder)
-        .follow_links(args.follow)
-        .max_depth(1)
-        .min_depth(1)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.metadata().unwrap().is_dir() && !e.file_name().eq("."))
-        .filter(|e| !e.file_name().to_str().unwrap().starts_with(".") || args.not_skip_dot_folder)
-        .map(|e| e.path().canonicalize().unwrap())
-        // .inspect(|f| println!("↘️ {}", f.display()))
-        .map(|f| clean_folder(&f, args, targets))
-        .collect();
-
-    Ok(())
-}
+// fn dive_deeper(
+//     folder: &impl AsRef<Path>,
+//     args: &PurifyArgs,
+//     targets: &[FileToFolderMatch],
+// ) -> Result<()> {
+//     let _results: Vec<Result<()>> = WalkDir::new(folder)
+//         .follow_links(args.follow)
+//         .max_depth(1)
+//         .min_depth(1)
+//         // .into_iter()
+//         .into_iter()
+//         .filter_map(|e| e.ok())
+//         .filter(|e| e.metadata().unwrap().is_dir() && !e.file_name().eq("."))
+//         .filter(|e| !e.file_name().to_str().unwrap().starts_with(".") || args.not_skip_dot_folder)
+//         .map(|e| e.path())
+//         .cartesian_product(targets.iter())
+//         .filter(|(e, t)| e.file_name().unwrap().to_str().unwrap() != t.folder_to_remove)
+//         .map(|(e, _)| e.canonicalize().unwrap())
+//         // .map(|e| e.path().canonicalize().unwrap())
+//         // .inspect(|f| println!("↘️ {}", f.display()))
+//         .map(|f| clean_folder(&f, args, targets))
+//         .collect();
+//
+//     Ok(())
+// }
