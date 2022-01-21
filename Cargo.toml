@@ -1,26 +1,20 @@
 [package]
-name = "purify-cli"
-description = "purify-cli"
+name = "putzen-cli"
+description = "help keeping your disk clean of build and dependency artifacts"
 version = "0.0.1"
 authors = ["Sven Assmann <sven.assmann.it@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "GPL-3.0-only"
 readme = "README.md"
-keywords = ["commandline"]
+keywords = ["commandline", "cleanup"]
 categories = ["command-line-utilities"]
-repository = "https://github.com/sassman/purify-cli-rs"
-exclude = [".ci/*", ".gitignore", ".travis.yml"]
-
-[badges]
-travis-ci = { repository = "sassman/purify-cli-rs", branch = "master" }
-maintenance = { status = "actively-developed" }
+repository = "https://github.com/sassman/putzen-rs"
+exclude = [".github/*", ".ci/*" ,".gitignore"]
 
 [dependencies]
-clap = "2.33"
-#jwalk = "0.6"
-#itertools = "0.9.0"
-#rayon = "1.5.1"
+argh = "0.1"
+jwalk = "0.6"
 
 [[bin]]
-name = "purify"
-path = "src/main.rs"
+name = "putzen"
+path = "src/bin/putzen.rs"
