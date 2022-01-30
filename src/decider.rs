@@ -1,8 +1,6 @@
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirm;
-use std::io::{stdin, Error, ErrorKind, Result, Write};
-
-const OPTIONS: &str = "[ (y)es, (N)o, yes to (a)ll, (q)uit ]";
+use std::io::Result;
 
 #[derive(Clone, Copy)]
 pub enum Decision {
@@ -22,49 +20,6 @@ pub trait Decide {
         ctx: &DecisionContext,
         question: impl AsRef<str>,
     ) -> Result<Decision>;
-}
-
-#[derive(Default)]
-pub struct InteractiveDecisionWithMemory {
-    decision_memory: Option<Decision>,
-}
-
-impl Decide for InteractiveDecisionWithMemory {
-    fn obtain_decision(
-        &mut self,
-        ctx: &DecisionContext,
-        question: impl AsRef<str>,
-    ) -> Result<Decision> {
-        let question = question.as_ref();
-        println!(
-            "{} {}{}: ",
-            question,
-            OPTIONS,
-            if ctx.is_dry_run { " [dry-run]" } else { "" }
-        );
-        std::io::stdout().flush()?;
-        if self.decision_memory.is_some() {
-            println!("yes (from previous choice)");
-            std::io::stdout().flush()?;
-
-            return self
-                .decision_memory
-                .ok_or_else(|| Error::from(ErrorKind::Other));
-        }
-
-        let mut decision = String::new();
-        stdin().read_line(&mut decision)?;
-        match decision.trim() {
-            "y" => Ok(Decision::Yes),
-            "a" => {
-                self.decision_memory = Some(Decision::Yes);
-                self.decision_memory
-                    .ok_or_else(|| Error::from(ErrorKind::Other))
-            }
-            "q" => Ok(Decision::Quit),
-            _ => Ok(Decision::No),
-        }
-    }
 }
 
 #[derive(Default)]

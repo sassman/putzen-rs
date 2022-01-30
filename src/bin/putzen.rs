@@ -96,10 +96,10 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
         for rule in to_clean {
             match if args.dry_run {
                 let cleaner = DryRunCleaner::default();
-                folder.accept(rule, &cleaner, &mut decider, &ctx)
+                folder.accept(&ctx, rule, &cleaner, &mut decider)
             } else {
                 let cleaner = ProperCleaner::default();
-                folder.accept(rule, &cleaner, &mut decider, &ctx)
+                folder.accept(&ctx, rule, &cleaner, &mut decider)
             } {
                 Ok(FolderProcessed::Abort) => return Ok(()),
                 Ok(FolderProcessed::Cleaned(size)) => {

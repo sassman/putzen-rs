@@ -45,10 +45,10 @@ pub struct Folder(PathBuf);
 impl Folder {
     pub fn accept(
         &self,
+        ctx: &DecisionContext,
         rule: &FileToFolderMatch,
         cleaner: &impl DoCleanUp,
         decider: &mut impl Decide,
-        ctx: &DecisionContext,
     ) -> Result<FolderProcessed> {
         if let Ok(folder_to_remove) = rule.resolve_path_to_remove(self) {
             let size_amount = folder_to_remove.calculate_size();
