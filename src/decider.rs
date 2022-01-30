@@ -34,7 +34,7 @@ impl Decide for NiceInteractiveDecider {
         question: impl AsRef<str>,
     ) -> Result<Decision> {
         Ok(self.decision_memory.as_ref().copied().unwrap_or_else(|| {
-            match Confirm::with_theme(&ColorfulTheme::default())
+            Confirm::with_theme(&ColorfulTheme::default())
                 .with_prompt(format!(
                     "{}{}",
                     question.as_ref(),
@@ -45,11 +45,8 @@ impl Decide for NiceInteractiveDecider {
                 .wait_for_newline(false)
                 .interact_opt()
                 .unwrap()
-            {
-                None => Decision::Quit,
-                Some(true) => Decision::Yes,
-                Some(false) => Decision::No,
-            }
+                .map(|x| if x { Decision::Yes } else { Decision::No })
+                .unwrap_or(Decision::Quit)
         }))
     }
 }
