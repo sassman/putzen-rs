@@ -1,10 +1,8 @@
 mod cleaner;
 mod decider;
-mod logger;
 
 pub use crate::cleaner::*;
 pub use crate::decider::*;
-pub use crate::logger::*;
 
 use jwalk::{ClientState, DirEntry, Parallelism};
 use std::convert::{TryFrom, TryInto};
@@ -47,39 +45,43 @@ pub struct Folder(PathBuf);
 impl Folder {
     pub fn accept(
         &self,
+        ctx: &DecisionContext,
         rule: &FileToFolderMatch,
         cleaner: &impl DoCleanUp,
         decider: &mut impl Decide,
-        logger: &dyn Logger,
     ) -> Result<FolderProcessed> {
         if let Ok(folder_to_remove) = rule.resolve_path_to_remove(self) {
             let size_amount = folder_to_remove.calculate_size();
             let size = size_amount.as_human_readable();
-            logger.info(format!("{} ({})", folder_to_remove, size).as_str());
-            logger.info(format!("  ├─ because of ../{}", rule.file_to_check).as_str());
+            println!("{} ({})", folder_to_remove, size);
+            println!("  ├─ because of ../{}", rule.file_to_check);
 
-            let result =
-                match decider.obtain_decision(logger, "  ├─ delete directory recursively? ") {
-                    Ok(Decision::Yes) => match cleaner.do_cleanup(folder_to_remove)? {
-                        Clean::Cleaned => {
-                            logger.info(format!("  └─ deleted {}", size).as_str());
-                            FolderProcessed::Cleaned(size_amount)
-                        }
-                        Clean::NotCleaned => {
-                            logger.info(format!("  └─ dry-run: not deleted {}", size).as_str());
-                            FolderProcessed::Skipped
-                        }
-                    },
-                    Ok(Decision::Quit) => {
-                        logger.info("  └─ quiting");
-                        FolderProcessed::Abort
+            let result = match decider.obtain_decision(ctx, "├─ delete directory recursively?")
+            {
+                Ok(Decision::Yes) => match cleaner.do_cleanup(folder_to_remove)? {
+                    Clean::Cleaned => {
+                        println!("  └─ deleted {}", size);
+                        FolderProcessed::Cleaned(size_amount)
                     }
-                    _ => {
-                        logger.info("  └─ skipped");
+                    Clean::NotCleaned => {
+                        println!(
+                            "  └─ not deleted{}{}",
+                            if ctx.is_dry_run { " [dry-run] " } else { "" },
+                            size
+                        );
                         FolderProcessed::Skipped
                     }
-                };
-            logger.info("");
+                },
+                Ok(Decision::Quit) => {
+                    println!("  └─ quiting");
+                    FolderProcessed::Abort
+                }
+                _ => {
+                    println!("  └─ skipped");
+                    FolderProcessed::Skipped
+                }
+            };
+            println!();
             Ok(result)
         } else {
             Err(Error::from(ErrorKind::Unsupported))

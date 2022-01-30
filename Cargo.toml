@@ -13,6 +13,7 @@ exclude = [".github/*", ".ci/*" ,".gitignore"]
 
 [dependencies]
 argh = "0.1"
+dialoguer = "0.9"
 jwalk = "0.6"
 
 [[bin]]
