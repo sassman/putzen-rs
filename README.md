@@ -9,14 +9,20 @@ It does so by a simple "File" -> "Folder" rule. If the "File" and "Folder" is pr
 
 It also does all this fast, means in parallel (if the filesystem supports it).
 
-### Features
+### Supported Artifacts
 
 putzen supports cleaning artifacts for:
-- rust  (`Cargo.toml` -> `target`)
-- js (`package.json` -> `node_modules`)
-- CMake (`CMakeLists.txt` -> `build`)
 
-It can do a dry-run, asks you for permission, summarizes size nicely
+| type       | file that is checked | folder that is cleaned |
+|------------|----------------------|------------------------|
+| rust       | Cargo.toml           | target                 |
+| javascript | package.json         | node_modules           |
+| CMake      | CMakeLists.txt       | build                  |
+
+furthermore, it does also support:
+- It can do run a dry-run (`-d`)
+- Interactive asking for deletion
+- Sums up the space that will be freed
 
 ## Quick Start
 
@@ -43,7 +49,7 @@ $HOME/.cargo/bin/putzen
 ```sh
 $ putzen --help
 
-Usage: putzen <folder> [-d] [-L] [-a]
+Usage: putzen <folder> [-d] [-y] [-L] [-a]
 
 help keeping your disk clean of build and dependency artifacts
 
@@ -52,6 +58,7 @@ Positional Arguments:
 
 Options:
   -d, --dry-run     dry-run will never delete anything, good for simulations
+  -y, --yes-to-all  switch to say yes to all questions
   -L, --follow      follow symbolic links
   -a, --dive-into-hidden-folders
                     dive into hidden folders too, e.g. `.git`
