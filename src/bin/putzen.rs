@@ -6,8 +6,8 @@ use argh::FromArgs;
 use jwalk::Parallelism;
 
 use putzen_cli::{
-    DryRunCleaner, DryRunLogger, FileToFolderMatch, Folder, FolderProcessed, HumanReadable,
-    InteractiveDecisionWithMemory, Logger, PathToRemoveResolver, ProperCleaner, StdLogger,
+    DecisionContext, DryRunCleaner, FileToFolderMatch, Folder, FolderProcessed, HumanReadable,
+    NiceInteractiveDecider, PathToRemoveResolver, ProperCleaner,
 };
 
 /// all supported this to clean up
@@ -41,19 +41,14 @@ fn main() -> Result<()> {
     visit_path(&argh::from_env())
 }
 
-fn logger(dry_run: bool) -> Box<dyn Logger> {
-    if dry_run {
-        return Box::new(DryRunLogger::default());
-    }
-    Box::new(StdLogger::default())
-}
-
 fn visit_path(args: &PurifyArgs) -> Result<()> {
     let to_clean = &FOLDER_TO_CLEANUP;
-    let mut decider = InteractiveDecisionWithMemory::default();
+    // let mut decider = InteractiveDecisionWithMemory::default();
+    let mut decider = NiceInteractiveDecider::default();
     let mut amount_cleaned = 0;
-    let logger = logger(args.dry_run);
-
+    let ctx = DecisionContext {
+        is_dry_run: args.dry_run,
+    };
     'folders: for folder in
         jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(args.folder.as_path())
             .skip_hidden(!args.dive_into_hidden_folders)
@@ -101,10 +96,10 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
         for rule in to_clean {
             match if args.dry_run {
                 let cleaner = DryRunCleaner::default();
-                folder.accept(rule, &cleaner, &mut decider, logger.as_ref())
+                folder.accept(rule, &cleaner, &mut decider, &ctx)
             } else {
                 let cleaner = ProperCleaner::default();
-                folder.accept(rule, &cleaner, &mut decider, logger.as_ref())
+                folder.accept(rule, &cleaner, &mut decider, &ctx)
             } {
                 Ok(FolderProcessed::Abort) => return Ok(()),
                 Ok(FolderProcessed::Cleaned(size)) => {
