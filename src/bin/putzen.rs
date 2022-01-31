@@ -40,7 +40,7 @@ struct PurifyArgs {
     #[argh(switch, short = 'a')]
     dive_into_hidden_folders: bool,
 
-    /// path of where to start with disk clean up.
+    /// path where to start with disk clean up.
     #[argh(positional, default = "PathBuf::from(\".\")")]
     folder: PathBuf,
 }
