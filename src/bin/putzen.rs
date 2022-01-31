@@ -24,6 +24,10 @@ struct PurifyArgs {
     #[argh(switch, short = 'd')]
     dry_run: bool,
 
+    /// switch to say yes to all questions
+    #[argh(switch, short = 'y')]
+    yes_to_all: bool,
+
     /// follow symbolic links
     #[argh(switch, short = 'L')]
     follow: bool,
@@ -43,11 +47,11 @@ fn main() -> Result<()> {
 
 fn visit_path(args: &PurifyArgs) -> Result<()> {
     let to_clean = &FOLDER_TO_CLEANUP;
-    // let mut decider = InteractiveDecisionWithMemory::default();
     let mut decider = NiceInteractiveDecider::default();
     let mut amount_cleaned = 0;
     let ctx = DecisionContext {
         is_dry_run: args.dry_run,
+        yes_to_all: args.yes_to_all,
     };
     'folders: for folder in
         jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(args.folder.as_path())

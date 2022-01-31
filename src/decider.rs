@@ -12,6 +12,7 @@ pub enum Decision {
 #[derive(Clone, Copy, Default)]
 pub struct DecisionContext {
     pub is_dry_run: bool,
+    pub yes_to_all: bool,
 }
 
 pub trait Decide {
@@ -33,20 +34,22 @@ impl Decide for NiceInteractiveDecider {
         ctx: &DecisionContext,
         question: impl AsRef<str>,
     ) -> Result<Decision> {
+        let suffix = if ctx.is_dry_run { " [dry-run]" } else { "" };
         Ok(self.decision_memory.as_ref().copied().unwrap_or_else(|| {
-            Confirm::with_theme(&ColorfulTheme::default())
-                .with_prompt(format!(
-                    "{}{}",
-                    question.as_ref(),
-                    if ctx.is_dry_run { " [dry-run]" } else { "" }
-                ))
-                .default(false)
-                .show_default(true)
-                .wait_for_newline(false)
-                .interact_opt()
-                .unwrap()
-                .map(|x| if x { Decision::Yes } else { Decision::No })
-                .unwrap_or(Decision::Quit)
+            if ctx.yes_to_all {
+                println!("  {}{} [yes by -y arg]", question.as_ref(), suffix);
+                Decision::Yes
+            } else {
+                Confirm::with_theme(&ColorfulTheme::default())
+                    .with_prompt(format!("{}{}", question.as_ref(), suffix,))
+                    .default(false)
+                    .show_default(true)
+                    .wait_for_newline(false)
+                    .interact_opt()
+                    .unwrap()
+                    .map(|x| if x { Decision::Yes } else { Decision::No })
+                    .unwrap_or(Decision::Quit)
+            }
         }))
     }
 }
