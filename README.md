@@ -1,8 +1,8 @@
 # Putzen
 
-> "putzen" is German and means cleaning. Nobody likes "putzen". But it is necessary.
+> "putzen" is German and means cleaning. It helps keeping your disk clean of build and dependency artifacts safely.
 
-## What does putzen?
+## What does putzen do?
 
 In short, putzen solves the problem of cleaning up build or dependency artifacts.
 It does so by a simple "File" -> "Folder" rule. If the "File" and "Folder" is present, it cleans "Folder"
