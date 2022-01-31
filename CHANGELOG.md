@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 [Unreleased]: https://github.com/sassman/putzen-rs/compare/v1.0.0...HEAD
 
+## [1.0.1] - 2022-01-31
+[1.0.1]: https://github.com/sassman/putzen-rs/compare/v1.0.0...v1.0.1
+
+### Features
+
+- Add `-v` and default starting folder (#4)
+
 ### Miscellaneous Tasks
 
 - Fix release-binary-assets workflow
+
+### Release
+
+- CHANGELOG.md + version bump (#5)
 
 ## [1.0.0] - 2022-01-31
 [1.0.0]: https://github.com/sassman/putzen-rs/compare/v1.0.0
