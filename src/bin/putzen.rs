@@ -20,6 +20,10 @@ static FOLDER_TO_CLEANUP: [FileToFolderMatch; 3] = [
 #[derive(FromArgs)]
 /// help keeping your disk clean of build and dependency artifacts
 struct PurifyArgs {
+    /// show the version number
+    #[argh(switch, short = 'v')]
+    version: bool,
+
     /// dry-run will never delete anything, good for simulations
     #[argh(switch, short = 'd')]
     dry_run: bool,
@@ -37,12 +41,17 @@ struct PurifyArgs {
     dive_into_hidden_folders: bool,
 
     /// path of where to start with disk clean up.
-    #[argh(positional)]
+    #[argh(positional, default = "PathBuf::from(\".\")")]
     folder: PathBuf,
 }
 
 fn main() -> Result<()> {
-    visit_path(&argh::from_env())
+    let args: PurifyArgs = argh::from_env();
+    if args.version {
+        println!("{} {}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+    visit_path(&args)
 }
 
 fn visit_path(args: &PurifyArgs) -> Result<()> {
@@ -53,6 +62,7 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
         is_dry_run: args.dry_run,
         yes_to_all: args.yes_to_all,
     };
+    println!("Start cleaning at {}", args.folder.display());
     'folders: for folder in
         jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(args.folder.as_path())
             .skip_hidden(!args.dive_into_hidden_folders)
