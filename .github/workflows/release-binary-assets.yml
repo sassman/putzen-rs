@@ -26,6 +26,10 @@ jobs:
             os: windows-latest
             cross: false
             binName: putzen.exe
+          - target: x86_64-pc-windows-gnu
+            os: windows-latest
+            cross: false
+            binName: putzen.exe
     steps:
       - uses: actions/checkout@v2
       - name: Setup Rust
@@ -46,7 +50,7 @@ jobs:
         with:
           command: run
           use-cross: ${{ matrix.cross }}
-          args: --release --target=${{ matrix.target }} -- -V
+          args: --release --target=${{ matrix.target }} -- --help
       - name: Create Archive
         id: archive
         shell: bash
