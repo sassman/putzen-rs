@@ -2,6 +2,8 @@
 
 > "putzen" is German and means cleaning. It helps keeping your disk clean of build and dependency artifacts safely.
 
+![demo](docs/demo.gif)
+
 ## What does putzen do?
 
 In short, putzen solves the problem of cleaning up build or dependency artifacts.
