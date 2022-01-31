@@ -4,15 +4,21 @@
 # changelog header
 header = """
 # Changelog
-All notable changes to this project will be documented in this file.\n
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 """
 # template for the changelog body
 # https://tera.netlify.app/docs/#introduction
 body = """
 {% if version %}\
     ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+    [{{ version | trim_start_matches(pat="v") }}]: https://github.com/sassman/putzen-rs/compare/{{ version }}...{{ version }}-before
 {% else %}\
     ## [unreleased]
+    [Unreleased]: https://github.com/sassman/putzen-rs/compare/vX.X.X...HEAD
 {% endif %}\
 {% for group, commits in commits | group_by(attribute="group") %}
     ### {{ group | upper_first }}
@@ -57,4 +63,4 @@ ignore_tags = ""
 # sort the tags topologically
 topo_order = false
 # sort the commits inside sections by oldest/newest order
-sort_commits = "oldest"
+sort_commits = "newest"
