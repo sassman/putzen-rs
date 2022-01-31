@@ -33,10 +33,8 @@ furthermore, it does also support:
 To install the `putzen`, you just need to run
 
 ```bash
-cargo install --force putzen-cli
+cargo install putzen-cli
 ```
-
-(--force just makes it update to the latest `putzen` if it's already installed)
 
 **Note** the binary is called `putzen` (without `-cli`)
 
@@ -56,9 +54,10 @@ Usage: putzen <folder> [-d] [-y] [-L] [-a]
 help keeping your disk clean of build and dependency artifacts
 
 Positional Arguments:
-  folder            path of where to start with disk clean up.
+  folder            path where to start with disk clean up.
 
 Options:
+  -v, --version     show the version number
   -d, --dry-run     dry-run will never delete anything, good for simulations
   -y, --yes-to-all  switch to say yes to all questions
   -L, --follow      follow symbolic links
