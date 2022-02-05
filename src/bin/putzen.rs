@@ -62,50 +62,53 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
         is_dry_run: args.dry_run,
         yes_to_all: args.yes_to_all,
     };
-    println!("Start cleaning at {}", args.folder.display());
-    'folders: for folder in
-        jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(args.folder.as_path())
-            .skip_hidden(!args.dive_into_hidden_folders)
-            .follow_links(args.follow)
-            .parallelism(Parallelism::RayonNewPool(0))
-            .process_read_dir(move |_, _, _, entries| {
-                for e in entries
-                    .iter_mut()
-                    .filter(|e| e.is_ok() && e.as_ref().unwrap().path().is_dir())
-                {
-                    let mut e = e.as_mut().unwrap();
-                    let potential_folder_to_remove = e.path();
-                    for rule in to_clean {
-                        let folder = Folder::try_from(potential_folder_to_remove.clone());
-                        match folder {
-                            Ok(folder) => {
-                                if rule.resolve_path_to_remove(&folder).is_ok() {
-                                    // now we gonna skip reading it's content, since it's going to be removed anyways
-                                    e.read_children_path = None;
-                                    e.client_state = Some(folder);
-
-                                    // no further rules needs to be checked..
-                                    break;
-                                } else {
-                                    e.client_state = Some(folder);
-                                }
-                            }
-                            Err(_) => {
+    let folder = args
+        .folder
+        .canonicalize()
+        .expect("Folder cannot be canonicalized.");
+    println!("Start cleaning at {}", folder.display());
+    'folders: for folder in jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(folder)
+        .skip_hidden(!args.dive_into_hidden_folders)
+        .follow_links(args.follow)
+        .parallelism(Parallelism::RayonNewPool(0))
+        .process_read_dir(move |_, _, _, entries| {
+            for e in entries
+                .iter_mut()
+                .filter(|e| e.is_ok() && e.as_ref().unwrap().path().is_dir())
+            {
+                let mut e = e.as_mut().unwrap();
+                let potential_folder_to_remove = e.path();
+                for rule in to_clean {
+                    let folder = Folder::try_from(potential_folder_to_remove.clone());
+                    match folder {
+                        Ok(folder) => {
+                            if rule.resolve_path_to_remove(&folder).is_ok() {
                                 // now we gonna skip reading it's content, since it's going to be removed anyways
                                 e.read_children_path = None;
+                                e.client_state = Some(folder);
 
                                 // no further rules needs to be checked..
                                 break;
+                            } else {
+                                e.client_state = Some(folder);
                             }
+                        }
+                        Err(_) => {
+                            // now we gonna skip reading it's content, since it's going to be removed anyways
+                            e.read_children_path = None;
+
+                            // no further rules needs to be checked..
+                            break;
                         }
                     }
                 }
-            })
-            .into_iter()
-            .filter(|f| f.is_ok())
-            .map(|e| e.unwrap())
-            .map(|e| e.client_state)
-            .flatten()
+            }
+        })
+        .into_iter()
+        .filter(|f| f.is_ok())
+        .map(|e| e.unwrap())
+        .map(|e| e.client_state)
+        .flatten()
     {
         for rule in to_clean {
             match if args.dry_run {
