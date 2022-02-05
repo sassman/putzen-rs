@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 
+- On windows: `UNC` paths are problematic (#9)
 - On windows path `.` is not recognized
 - Wrong heading level broke the build
 
