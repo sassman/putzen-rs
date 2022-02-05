@@ -1,3 +1,9 @@
+#[cfg(target_family = "windows")]
+use remove_dir_all::remove_dir_all;
+
+#[cfg(not(target_family = "windows"))]
+use std::fs::remove_dir_all;
+
 use std::io::Result;
 use std::path::Path;
 
@@ -14,7 +20,7 @@ pub trait DoCleanUp {
 pub struct ProperCleaner;
 impl DoCleanUp for ProperCleaner {
     fn do_cleanup(&self, path_to_remove: impl AsRef<Path>) -> Result<Clean> {
-        std::fs::remove_dir_all(path_to_remove.as_ref()).map(|_| Clean::Cleaned)
+        remove_dir_all(path_to_remove.as_ref()).map(|_| Clean::Cleaned)
     }
 }
 

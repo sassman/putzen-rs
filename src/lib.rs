@@ -54,7 +54,10 @@ impl Folder {
             let size_amount = folder_to_remove.calculate_size();
             let size = size_amount.as_human_readable();
             println!("{} ({})", folder_to_remove, size);
-            println!("  ├─ because of ../{}", rule.file_to_check);
+            println!(
+                "  ├─ because of {}",
+                PathBuf::from("..").join(rule.file_to_check).display()
+            );
 
             let result = match decider.obtain_decision(ctx, "├─ delete directory recursively?")
             {
@@ -137,7 +140,8 @@ impl TryFrom<PathBuf> for Folder {
         if !path.is_dir() || path.eq(Path::new(".")) || path.eq(Path::new("..")) {
             Err(Error::from(ErrorKind::Unsupported))
         } else {
-            Ok(Self(path))
+            let p = path.canonicalize()?;
+            Ok(Self(p))
         }
     }
 }
@@ -168,7 +172,7 @@ impl PathToRemoveResolver for FileToFolderMatch {
         if file_to_check.exists() {
             let path_to_remove = folder.join(self.folder_to_remove);
             if path_to_remove.exists() {
-                return Ok(Folder(path_to_remove));
+                return path_to_remove.try_into();
             }
         }
 

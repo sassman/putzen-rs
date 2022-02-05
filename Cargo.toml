@@ -15,6 +15,9 @@ argh = "0.1"
 dialoguer = "0.9"
 jwalk = "0.6"
 
+[target.'cfg(target_family = "windows")'.dependencies]
+remove_dir_all = "0.7.0"
+
 [[bin]]
 name = "putzen"
 path = "src/bin/putzen.rs"
