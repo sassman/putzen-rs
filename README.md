@@ -83,5 +83,5 @@ Options:
 ## License
 
 - **[GNU GPL v3 license](https://www.gnu.org/licenses/gpl-3.0)**
-- Copyright 2019 - 2022 © [Sven Assmann][https://d34dl0ck.me]
+- Copyright 2019 - 2022 © [Sven Assmann](https://d34dl0ck.me)
 - Logo - [Clean icons created by photo3idea_studio - Flaticon](https://www.flaticon.com/free-icons/clean)
