@@ -40,9 +40,23 @@ furthermore, it does also support:
 
 ### Install
 
+### On Linux as snap
+
+[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/putzen)
+
+- installation [for Linux Mint](https://snapcraft.io/install/putzen/mint)
+- installation [for Arch Linux](https://snapcraft.io/install/putzen/arch)
+
+*TL;DR:*
+```sh
+sudo snap install putzen
+```
+
+### With cargo
+
 To install the `putzen`, you just need to run
 
-```bash
+```sh
 cargo install putzen-cli
 ```
 
