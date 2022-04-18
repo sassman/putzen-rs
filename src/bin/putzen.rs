@@ -106,9 +106,7 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
         })
         .into_iter()
         .filter(|f| f.is_ok())
-        .map(|e| e.unwrap())
-        .map(|e| e.client_state)
-        .flatten()
+        .filter_map(|e| e.unwrap().client_state)
     {
         for rule in to_clean {
             match if args.dry_run {
