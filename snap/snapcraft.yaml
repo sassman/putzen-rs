@@ -1,0 +1,24 @@
+name: putzen
+base: core18
+adopt-info: putzen
+summary: clean build and dependency artifacts safely
+description: |
+  "putzen" is German and means cleaning. 
+  It helps keeping your disk clean of build and dependency artifacts safely.
+
+grade: stable
+confinement: strict
+
+parts:
+  putzen:
+    plugin: rust
+    source: .
+    override-pull: |
+      snapcraftctl pull
+      snapcraftctl set-version "$(git describe --tags)"
+
+apps:
+  putzen:
+    command: bin/putzen
+    plugs:
+      - home
