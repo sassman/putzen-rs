@@ -5,7 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
-[Unreleased]: https://github.com/sassman/putzen-rs/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/sassman/putzen-rs/compare/v1.0.3...HEAD
+
+## [1.0.3] - 2022-04-18
+[1.0.3]: https://github.com/sassman/putzen-rs/compare/v1.0.2...v1.0.3
+
+### Miscellaneous Tasks
+
+- 
+
 
 ## [1.0.2] - 2022-02-06
 [1.0.2]: https://github.com/sassman/putzen-rs/compare/v1.0.1...v1.0.2
@@ -13,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 - On windows: `UNC` paths are problematic (#9)
-- On windows path `.` is not recognized
+- On windows path `.` is not recognized (#7)
 - Wrong heading level broke the build
 
 ### Features
@@ -22,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
-- Fix little link issue
+- Add a changelog
 
 ## [1.0.1] - 2022-01-31
 [1.0.1]: https://github.com/sassman/putzen-rs/compare/v1.0.0...v1.0.1

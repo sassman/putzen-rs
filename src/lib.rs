@@ -112,8 +112,7 @@ impl Folder {
             })
             .into_iter()
             .filter(|f| f.is_ok())
-            .map(|e| e.unwrap().client_state)
-            .flatten()
+            .filter_map(|e| e.unwrap().client_state)
             .sum()
     }
 }
