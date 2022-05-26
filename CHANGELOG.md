@@ -5,16 +5,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
-[Unreleased]: https://github.com/sassman/putzen-rs/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/sassman/putzen-rs/compare/v1.0.4...HEAD
+
+## [1.0.4] - 2022-05-26
+[1.0.4]: https://github.com/sassman/putzen-rs/compare/v1.0.4...v1.0.3
+
+### Build
+
+- Bump dialoguer from 0.10.0 to 0.10.1 (#13)
+- Bump dialoguer from 0.9.0 to 0.10.0 (#12)
 
 ## [1.0.3] - 2022-04-18
-[1.0.3]: https://github.com/sassman/putzen-rs/compare/v1.0.2...v1.0.3
+[1.0.3]: https://github.com/sassman/putzen-rs/compare/v1.0.3...v1.0.2
 
-### Miscellaneous Tasks
+### Features
 
-- update dependencies and fix recent clippy findings ([#11](https://github.com/sassman/putzen-rs/pull/11))
+- Document snap installation
+- Add snapcraft config
 
-## [1.0.2] - 2022-02-06
+### Build
+
+- Update deps + clippy fixes (#11)
+
+## [1.0.2] - 2022-02-05
 [1.0.2]: https://github.com/sassman/putzen-rs/compare/v1.0.1...v1.0.2
 
 ### Bug Fixes
