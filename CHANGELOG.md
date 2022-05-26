@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [Unreleased]: https://github.com/sassman/putzen-rs/compare/v1.0.4...HEAD
 
 ## [1.0.4] - 2022-05-26
-[1.0.4]: https://github.com/sassman/putzen-rs/compare/v1.0.4...v1.0.3
+[1.0.4]: https://github.com/sassman/putzen-rs/compare/v1.0.3...v1.0.4
 
 ### Build
 
@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump dialoguer from 0.9.0 to 0.10.0 (#12)
 
 ## [1.0.3] - 2022-04-18
-[1.0.3]: https://github.com/sassman/putzen-rs/compare/v1.0.3...v1.0.2
+[1.0.3]: https://github.com/sassman/putzen-rs/compare/v1.0.2...v1.0.3
 
 ### Features
 
