@@ -13,7 +13,7 @@ include = ["src/**/*", "LICENSE", "*.md"]
 [dependencies]
 argh = "0.1"
 dialoguer = "0.10"
-jwalk = "0.6"
+jwalk = "0.8"
 
 [target.'cfg(target_family = "windows")'.dependencies]
 remove_dir_all = "0.7.0"
