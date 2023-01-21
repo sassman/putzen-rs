@@ -1,8 +1,8 @@
 [package]
 name = "putzen-cli"
 description = "helps keeping your disk clean of build and dependency artifacts safely"
-version = "1.0.6"
-authors = ["Sven Assmann <sven.assmann.it@gmail.com>"]
+version = "1.0.7"
+authors = ["Sven Kanoldt <sven@d34dl0ck.me>"]
 edition = "2021"
 license = "GPL-3.0-only"
 keywords = ["commandline", "cleanup"]
