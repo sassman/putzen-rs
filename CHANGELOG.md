@@ -5,15 +5,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
-[Unreleased]: https://github.com/sassman/putzen-rs/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/sassman/putzen-rs/compare/v1.0.7...HEAD
+
+## [1.0.7] - 2023-01-21
+[1.0.7]: https://github.com/sassman/putzen-rs/compare/v1.0.6...v1.0.7
+
+### Build
+
+- [bump dialoguer from 0.10.2 to 0.10.3](https://github.com/sassman/putzen-rs/pull/20)
+- [bump argh from 0.1.9 to 0.1.10](https://github.com/sassman/putzen-rs/pull/19)
+
+### Contributors
+- [dependabot[bot]](https://github.com/apps/dependabot)
+- [sassman](https://github.com/sassman)
 
 ## [1.0.6] - 2022-12-26
 [1.0.6]: https://github.com/sassman/putzen-rs/compare/v1.0.5...v1.0.6
 
 ### Build
 
-- [build(deps): bump jwalk from 0.6.0 to 0.8.1](https://github.com/sassman/putzen-rs/pull/17)
-- [build(deps): bump argh from 0.1.7 to 0.1.9](https://github.com/sassman/putzen-rs/pull/16)
+- [bump jwalk from 0.6.0 to 0.8.1](https://github.com/sassman/putzen-rs/pull/17)
+- [bump argh from 0.1.7 to 0.1.9](https://github.com/sassman/putzen-rs/pull/16)
 
 ### Contributors
 - [dependabot[bot]](https://github.com/apps/dependabot)
@@ -23,8 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Build
 
-- [build(deps): bump argh from 0.1.7 to 0.1.9](https://github.com/sassman/putzen-rs/pull/16)
-- [build(deps): bump dialoguer from 0.10.1 to 0.10.2](https://github.com/sassman/putzen-rs/pull/15)
+- [bump argh from 0.1.7 to 0.1.9](https://github.com/sassman/putzen-rs/pull/16)
+- [bump dialoguer from 0.10.1 to 0.10.2](https://github.com/sassman/putzen-rs/pull/15)
 
 ### Contributors
 - [dependabot[bot]](https://github.com/apps/dependabot)
