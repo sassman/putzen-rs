@@ -12,7 +12,7 @@ include = ["src/**/*", "LICENSE", "*.md"]
 
 [dependencies]
 argh = "0.1"
-dialoguer = "0.10"
+dialoguer = "0.11"
 jwalk = "0.8"
 
 [target.'cfg(target_family = "windows")'.dependencies]
