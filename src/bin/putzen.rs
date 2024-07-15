@@ -76,7 +76,7 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
                 .iter_mut()
                 .filter(|e| e.is_ok() && e.as_ref().unwrap().path().is_dir())
             {
-                let mut e = e.as_mut().unwrap();
+                let e = e.as_mut().unwrap();
                 let potential_folder_to_remove = e.path();
                 for rule in to_clean {
                     let folder = Folder::try_from(potential_folder_to_remove.clone());
@@ -110,10 +110,10 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
     {
         for rule in to_clean {
             match if args.dry_run {
-                let cleaner = DryRunCleaner::default();
+                let cleaner = DryRunCleaner;
                 folder.accept(&ctx, rule, &cleaner, &mut decider)
             } else {
-                let cleaner = ProperCleaner::default();
+                let cleaner = ProperCleaner;
                 folder.accept(&ctx, rule, &cleaner, &mut decider)
             } {
                 Ok(FolderProcessed::Abort) => return Ok(()),
