@@ -261,7 +261,7 @@ dependencies = [
 
 [[package]]
 name = "putzen-cli"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "argh",
  "dialoguer",
