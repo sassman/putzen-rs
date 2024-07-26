@@ -16,7 +16,7 @@ dialoguer = "0.11"
 jwalk = "0.8"
 
 [target.'cfg(target_family = "windows")'.dependencies]
-remove_dir_all = "0.8.1"
+remove_dir_all = "0.8.3"
 
 [[bin]]
 name = "putzen"
