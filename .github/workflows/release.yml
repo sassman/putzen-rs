@@ -23,7 +23,6 @@ jobs:
     name: post / cargo publish
     needs: doing-a-build
     runs-on: ubuntu-latest
-    environment: release
     steps:
       - uses: actions/checkout@v4
       - name: setup | rust
@@ -37,7 +36,6 @@ jobs:
     name: post / github release
     needs: publish
     runs-on: ubuntu-latest
-    environment: release
     steps:
       - uses: actions/checkout@v4
       - name: setup | rust
