@@ -39,11 +39,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cross
       - name: build with cross
         shell: bash
-        run: |
-          cargo binstall cross
-          cross build --locked --release --target ${{ matrix.target }}
+        run: cross build --locked --release --target ${{ matrix.target }}
       - name: smoke test
         shell: bash
         run: |

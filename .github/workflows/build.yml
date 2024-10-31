@@ -75,10 +75,11 @@ jobs:
       - name: setup | rust
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
       - name: audit
-        run: |
-          cargo binstall cargo-deny
-          cargo deny check advisories bans sources
+        run: cargo deny check advisories bans sources
         continue-on-error: true
 
   publish-dry-run:
