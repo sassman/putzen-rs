@@ -55,7 +55,6 @@ jobs:
         rust: ["nightly", "stable"]
     runs-on: ${{ matrix.version }}
     continue-on-error: ${{ matrix.rust == 'nightly' }}
-    environment: build
     steps:
       - uses: actions/checkout@v4
       - name: setup | rust
