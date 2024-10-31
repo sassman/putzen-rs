@@ -31,7 +31,6 @@ jobs:
 
   lint:
     name: lint
-    needs: check
     strategy:
       fail-fast: false
       matrix:
@@ -49,7 +48,6 @@ jobs:
 
   tests:
     name: test
-    needs: check
     strategy:
       fail-fast: false
       matrix:
@@ -61,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: setup | rust
-        uses: dtolnay/rust-toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
@@ -78,13 +76,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: audit
-        uses: actions-rs/audit-check@v1
+        run: |
+          cargo binstall cargo-deny
+          cargo deny check advisories bans sources
         continue-on-error: true
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
   publish-dry-run:
     name: publish dry run
+    needs: tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
