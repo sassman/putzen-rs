@@ -3,6 +3,8 @@ on:
   release:
     types:
       - published
+  workflow_dispatch:
+
 jobs:
   release:
     runs-on: ${{ matrix.os }}
@@ -31,26 +33,21 @@ jobs:
             cross: false
             binName: putzen.exe
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - name: setup | rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
-      - uses: Swatinem/rust-cache@v1
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          use-cross: ${{ matrix.cross }}
-          args: --release --target=${{ matrix.target }}
-      - name: Smoke Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          use-cross: ${{ matrix.cross }}
-          args: --release --target=${{ matrix.target }} -- --help
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: build with cross
+        shell: bash
+        run: |
+          cargo binstall cross
+          cross build --locked --release --target ${{ matrix.target }}
+      - name: smoke test
+        shell: bash
+        run: |
+          cross run --locked --release --target ${{ matrix.target }} -- --help
       - name: Create Archive
         id: archive
         shell: bash

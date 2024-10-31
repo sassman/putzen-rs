@@ -5,10 +5,10 @@
 name: Release
 on:
   push:
-    tags: 
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]-alpha.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]-beta.[0-9]+'
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]-alpha.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]-beta.[0-9]+"
     paths-ignore:
       - "**/docs/**"
       - "**.md"
@@ -25,13 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: setup | rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          profile: minimal
+        uses: dtolnay/rust-toolchain@stable
       - uses: katyo/publish-crates@v1
         with:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -43,13 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: setup | rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          profile: minimal
+        uses: dtolnay/rust-toolchain@stable
       - name: Get version from tag
         id: tag_name
         run: |

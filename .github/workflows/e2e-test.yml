@@ -1,7 +1,7 @@
 name: e2e test
 on:
   schedule:
-    - cron: '0 18 * * 5'
+    - cron: "0 18 * * 5"
 
 # NOTE: needs to stay in sync with ./build.yml
 jobs:
@@ -10,14 +10,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [ 'macos-latest', 'ubuntu-latest', 'windows-latest']
+        version: ["macos-latest", "ubuntu-latest", "windows-latest"]
     runs-on: ${{ matrix.version }}
     steps:
       - name: setup | rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          profile: minimal
+        uses: dtolnay/rust-toolchain@stable
       - run: cargo install -f putzen-cli
       - run: putzen --help
