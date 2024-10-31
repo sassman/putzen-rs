@@ -40,15 +40,27 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
+        if: ${{ matrix.cross == true }}
         with:
           tool: cross
       - name: build with cross
+        if: ${{ matrix.cross == true }}
         shell: bash
         run: cross build --locked --release --target ${{ matrix.target }}
       - name: smoke test
+        if: ${{ matrix.cross == true }}
         shell: bash
         run: |
           cross run --locked --release --target ${{ matrix.target }} -- --help
+      - name: build with cargo
+        if: ${{ matrix.cross != true }}
+        shell: bash
+        run: cargo build --locked --release --target ${{ matrix.target }}
+      - name: smoke test with cargo
+        if: ${{ matrix.cross != true }}
+        shell: bash
+        run: |
+          cargo run --locked --release --target ${{ matrix.target }} -- --help
       - name: Create Archive
         id: archive
         shell: bash
