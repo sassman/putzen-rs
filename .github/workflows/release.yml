@@ -18,8 +18,6 @@ jobs:
   # call out to build.yml
   doing-a-build:
     uses: sassman/putzen-rs/.github/workflows/build.yml@main
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   publish:
     name: post / cargo publish
