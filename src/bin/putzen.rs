@@ -127,3 +127,52 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_e2e_scenario() {
+        let root_folder = tempfile::TempDir::new().unwrap();
+        let target_folder = root_folder.path().join("target");
+        std::fs::create_dir(&target_folder).unwrap();
+        std::fs::File::create(root_folder.path().join("Cargo.toml")).unwrap();
+
+        // create a target folder with one simple file in it
+        std::fs::File::create(target_folder.join("some_artefact")).unwrap();
+
+        // create also a node case in the root folder
+        let node_modules_folder = root_folder.path().join("node_modules");
+        std::fs::create_dir(&node_modules_folder).unwrap();
+        std::fs::File::create(root_folder.path().join("package.json")).unwrap();
+        std::fs::File::create(node_modules_folder.join("some_artefact")).unwrap();
+
+        // now we create a nested node case inside the root folder
+        let second_node_root_folder = root_folder.path().join("bar");
+        std::fs::create_dir(&second_node_root_folder).unwrap();
+        let nested_node_modules_folder = second_node_root_folder.join("node_modules");
+        std::fs::create_dir(&nested_node_modules_folder).unwrap();
+        std::fs::File::create(second_node_root_folder.join("package.json")).unwrap();
+        std::fs::File::create(nested_node_modules_folder.join("some_artefact")).unwrap();
+
+        let args = PurifyArgs {
+            version: false,
+            dry_run: false,
+            yes_to_all: true,
+            follow: false,
+            dive_into_hidden_folders: false,
+            folder: root_folder.path().to_path_buf(),
+        };
+
+        visit_path(&args).unwrap();
+
+        assert!(!target_folder.exists());
+        assert!(!node_modules_folder.exists());
+        assert!(!nested_node_modules_folder.exists());
+
+        assert!(root_folder.path().join("Cargo.toml").exists());
+        assert!(root_folder.path().join("package.json").exists());
+        assert!(second_node_root_folder.join("package.json").exists());
+    }
+}
