@@ -163,6 +163,33 @@ impl AsRef<Path> for Folder {
     }
 }
 
+#[deprecated(since = "2.0.0", note = "use trait `IsFolderToRemove` instead")]
+pub trait PathToRemoveResolver {
+    fn resolve_path_to_remove(&self, folder: impl AsRef<Path>) -> Result<Folder>;
+}
+
+#[allow(deprecated)]
+impl PathToRemoveResolver for FileToFolderMatch {
+    fn resolve_path_to_remove(&self, folder: impl AsRef<Path>) -> Result<Folder> {
+        let folder = folder.as_ref();
+        let file_to_check = folder.join(self.file_to_check);
+
+        if file_to_check.exists() {
+            let path_to_remove = folder.join(self.folder_to_remove);
+            if path_to_remove.exists() {
+                return path_to_remove.try_into();
+            }
+        }
+
+        Err(Error::from(ErrorKind::Unsupported))
+    }
+}
+
+/// Trait to check if a folder should be removed
+/// This is the successor of the deprecated `PathToRemoveResolver` and should be used instead.
+///
+/// The trait is implemented for `FileToFolderMatch` and can be used to check if a folder should be removed
+/// according to the rules defined in the `FileToFolderMatch` instance.
 pub trait IsFolderToRemove {
     fn is_folder_to_remove(&self, folder: &Folder) -> bool;
 }
