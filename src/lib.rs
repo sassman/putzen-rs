@@ -17,9 +17,13 @@ pub struct FileToFolderMatch {
 }
 
 pub enum FolderProcessed {
+    /// The folder was cleaned and the amount of bytes removed is given
     Cleaned(usize),
+    /// The folder was not cleaned because it did not match any rule
     NoRuleMatch,
+    /// The folder was skipped, e.g. user decided to skip it
     Skipped,
+    /// The folder was aborted, e.g. user decided to abort the whole process
     Abort,
 }
 
