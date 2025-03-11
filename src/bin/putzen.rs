@@ -1,13 +1,13 @@
 use std::convert::TryFrom;
-use std::io::{ErrorKind, Result};
+use std::io::Result;
 use std::path::PathBuf;
 
 use argh::FromArgs;
 use jwalk::Parallelism;
 
 use putzen_cli::{
-    DecisionContext, DryRunCleaner, FileToFolderMatch, Folder, FolderProcessed, HumanReadable,
-    NiceInteractiveDecider, PathToRemoveResolver, ProperCleaner,
+    DecisionContext, DoCleanUp, DryRunCleaner, FileToFolderMatch, Folder, FolderProcessed,
+    HumanReadable, IsFolderToRemove, NiceInteractiveDecider, ProperCleaner,
 };
 
 /// all supported this to clean up
@@ -66,66 +66,55 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
         .folder
         .canonicalize()
         .expect("Folder cannot be canonicalized.");
+
+    let cleaner: Box<dyn DoCleanUp> = if args.dry_run {
+        Box::new(DryRunCleaner)
+    } else {
+        Box::new(ProperCleaner)
+    };
+
     println!("Start cleaning at {}", folder.display());
-    'folders: for folder in jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(folder)
+    for folder in jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(folder)
         .skip_hidden(!args.dive_into_hidden_folders)
         .follow_links(args.follow)
-        .parallelism(Parallelism::RayonNewPool(0))
-        .process_read_dir(move |_, _, _, entries| {
-            for e in entries
-                .iter_mut()
-                .filter(|e| e.is_ok() && e.as_ref().unwrap().path().is_dir())
-            {
-                let e = e.as_mut().unwrap();
-                let potential_folder_to_remove = e.path();
-                for rule in to_clean {
-                    let folder = Folder::try_from(potential_folder_to_remove.clone());
-                    match folder {
-                        Ok(folder) => {
-                            if rule.resolve_path_to_remove(&folder).is_ok() {
-                                // now we gonna skip reading it's content, since it's going to be removed anyways
-                                e.read_children_path = None;
-                                e.client_state = Some(folder);
+        .parallelism(Parallelism::RayonNewPool(8))
+        .process_read_dir(move |_, _, _, children| {
+            children.retain(|dir_entry_result| {
+                dir_entry_result
+                    .as_ref()
+                    .map(|dir| dir.path().is_dir())
+                    .unwrap_or(false)
+            });
 
-                                // no further rules needs to be checked..
-                                break;
-                            } else {
-                                e.client_state = Some(folder);
+            children.iter_mut().for_each(|child| {
+                if let Ok(child) = child {
+                    if let Ok(folder) = Folder::try_from(child.path()) {
+                        for rule in to_clean {
+                            if rule.is_folder_to_remove(&folder) {
+                                child.client_state = Some(folder);
+                                child.read_children_path = None;
+                                return;
                             }
-                        }
-                        Err(_) => {
-                            // now we gonna skip reading it's content, since it's going to be removed anyways
-                            e.read_children_path = None;
-
-                            // no further rules needs to be checked..
-                            break;
                         }
                     }
                 }
-            }
+            });
         })
         .into_iter()
-        .filter(|f| f.is_ok())
-        .filter_map(|e| e.unwrap().client_state)
+        .filter_map(|f| f.ok())
+        .filter_map(|f| f.client_state)
     {
-        for rule in to_clean {
-            match if args.dry_run {
-                let cleaner = DryRunCleaner;
-                folder.accept(&ctx, rule, &cleaner, &mut decider)
-            } else {
-                let cleaner = ProperCleaner;
-                folder.accept(&ctx, rule, &cleaner, &mut decider)
-            } {
+        'rules: for rule in to_clean {
+            let result = folder.accept(&ctx, rule, &*cleaner, &mut decider);
+            match result {
                 Ok(FolderProcessed::Abort) => return Ok(()),
                 Ok(FolderProcessed::Cleaned(size)) => {
                     amount_cleaned += size;
-                    continue 'folders;
+                    continue 'rules;
                 }
-                Err(error) => match error.kind() {
-                    ErrorKind::Unsupported => continue,
-                    _ => return Err(error),
-                },
-                _ => continue 'folders,
+                Ok(FolderProcessed::NoRuleMatch) => continue 'rules,
+                Ok(FolderProcessed::Skipped) => continue 'rules,
+                Err(error) => return Err(error),
             };
         }
     }
@@ -137,4 +126,53 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_e2e_scenario() {
+        let root_folder = tempfile::TempDir::new().unwrap();
+        let target_folder = root_folder.path().join("target");
+        std::fs::create_dir(&target_folder).unwrap();
+        std::fs::File::create(root_folder.path().join("Cargo.toml")).unwrap();
+
+        // create a target folder with one simple file in it
+        std::fs::File::create(target_folder.join("some_artefact")).unwrap();
+
+        // create also a node case in the root folder
+        let node_modules_folder = root_folder.path().join("node_modules");
+        std::fs::create_dir(&node_modules_folder).unwrap();
+        std::fs::File::create(root_folder.path().join("package.json")).unwrap();
+        std::fs::File::create(node_modules_folder.join("some_artefact")).unwrap();
+
+        // now we create a nested node case inside the root folder
+        let second_node_root_folder = root_folder.path().join("bar");
+        std::fs::create_dir(&second_node_root_folder).unwrap();
+        let nested_node_modules_folder = second_node_root_folder.join("node_modules");
+        std::fs::create_dir(&nested_node_modules_folder).unwrap();
+        std::fs::File::create(second_node_root_folder.join("package.json")).unwrap();
+        std::fs::File::create(nested_node_modules_folder.join("some_artefact")).unwrap();
+
+        let args = PurifyArgs {
+            version: false,
+            dry_run: false,
+            yes_to_all: true,
+            follow: false,
+            dive_into_hidden_folders: false,
+            folder: root_folder.path().to_path_buf(),
+        };
+
+        visit_path(&args).unwrap();
+
+        assert!(!target_folder.exists());
+        assert!(!node_modules_folder.exists());
+        assert!(!nested_node_modules_folder.exists());
+
+        assert!(root_folder.path().join("Cargo.toml").exists());
+        assert!(root_folder.path().join("package.json").exists());
+        assert!(second_node_root_folder.join("package.json").exists());
+    }
 }

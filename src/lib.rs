@@ -9,6 +9,7 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt::{Display, Formatter};
 use std::io::{Error, ErrorKind, Result};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 pub struct FileToFolderMatch {
     file_to_check: &'static str,
@@ -17,6 +18,7 @@ pub struct FileToFolderMatch {
 
 pub enum FolderProcessed {
     Cleaned(usize),
+    NoRuleMatch,
     Skipped,
     Abort,
 }
@@ -39,7 +41,7 @@ impl FileToFolderMatch {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Folder(PathBuf);
 
 impl Folder {
@@ -47,55 +49,57 @@ impl Folder {
         &self,
         ctx: &DecisionContext,
         rule: &FileToFolderMatch,
-        cleaner: &impl DoCleanUp,
+        cleaner: &dyn DoCleanUp,
         decider: &mut impl Decide,
     ) -> Result<FolderProcessed> {
-        if let Ok(folder_to_remove) = rule.resolve_path_to_remove(self) {
-            let size_amount = folder_to_remove.calculate_size();
-            let size = size_amount.as_human_readable();
-            println!("{} ({})", folder_to_remove, size);
-            println!(
-                "  ├─ because of {}",
-                PathBuf::from("..").join(rule.file_to_check).display()
-            );
+        // better double check here
+        if !rule.is_folder_to_remove(self) {
+            return Ok(FolderProcessed::NoRuleMatch);
+        }
 
-            let result = match decider.obtain_decision(ctx, "├─ delete directory recursively?")
-            {
-                Ok(Decision::Yes) => match cleaner.do_cleanup(folder_to_remove)? {
-                    Clean::Cleaned => {
-                        println!("  └─ deleted {}", size);
-                        FolderProcessed::Cleaned(size_amount)
-                    }
-                    Clean::NotCleaned => {
-                        println!(
-                            "  └─ not deleted{}{}",
-                            if ctx.is_dry_run { " [dry-run] " } else { "" },
-                            size
-                        );
-                        FolderProcessed::Skipped
-                    }
-                },
-                Ok(Decision::Quit) => {
-                    println!("  └─ quiting");
-                    FolderProcessed::Abort
+        let size_amount = self.calculate_size();
+        let size = size_amount.as_human_readable();
+        println!("{} ({})", self, size);
+        println!(
+            "  ├─ because of {}",
+            PathBuf::from("..").join(rule.file_to_check).display()
+        );
+
+        let result = match decider.obtain_decision(ctx, "├─ delete directory recursively?") {
+            Ok(Decision::Yes) => match cleaner.do_cleanup(self.as_ref())? {
+                Clean::Cleaned => {
+                    println!("  └─ deleted {}", size);
+                    FolderProcessed::Cleaned(size_amount)
                 }
-                _ => {
-                    println!("  └─ skipped");
+                Clean::NotCleaned => {
+                    println!(
+                        "  └─ not deleted{}{}",
+                        if ctx.is_dry_run { " [dry-run] " } else { "" },
+                        size
+                    );
                     FolderProcessed::Skipped
                 }
-            };
-            println!();
-            Ok(result)
-        } else {
-            Err(Error::from(ErrorKind::Unsupported))
-        }
+            },
+            Ok(Decision::Quit) => {
+                println!("  └─ quiting");
+                FolderProcessed::Abort
+            }
+            _ => {
+                println!("  └─ skipped");
+                FolderProcessed::Skipped
+            }
+        };
+        println!();
+        Ok(result)
     }
 
     fn calculate_size(&self) -> usize {
-        jwalk::WalkDirGeneric::<((), Option<usize>)>::new(self.0.as_path())
+        jwalk::WalkDirGeneric::<((), Option<usize>)>::new(self.as_ref())
             .skip_hidden(false)
             .follow_links(false)
-            .parallelism(Parallelism::RayonNewPool(0))
+            .parallelism(Parallelism::RayonDefaultPool {
+                busy_timeout: Duration::from_secs(60),
+            })
             .process_read_dir(|_, _, _, dir_entry_results| {
                 dir_entry_results.iter_mut().for_each(|dir_entry_result| {
                     if let Ok(dir_entry) = dir_entry_result {
@@ -111,8 +115,8 @@ impl Folder {
                 })
             })
             .into_iter()
-            .filter(|f| f.is_ok())
-            .filter_map(|e| e.unwrap().client_state)
+            .filter_map(|f| f.ok())
+            .filter_map(|e| e.client_state)
             .sum()
     }
 }
@@ -159,23 +163,21 @@ impl AsRef<Path> for Folder {
     }
 }
 
-pub trait PathToRemoveResolver {
-    fn resolve_path_to_remove(&self, folder: impl AsRef<Path>) -> Result<Folder>;
+pub trait IsFolderToRemove {
+    fn is_folder_to_remove(&self, folder: &Folder) -> bool;
 }
 
-impl PathToRemoveResolver for FileToFolderMatch {
-    fn resolve_path_to_remove(&self, folder: impl AsRef<Path>) -> Result<Folder> {
-        let folder = folder.as_ref();
-        let file_to_check = folder.join(self.file_to_check);
-
-        if file_to_check.exists() {
-            let path_to_remove = folder.join(self.folder_to_remove);
-            if path_to_remove.exists() {
-                return path_to_remove.try_into();
-            }
-        }
-
-        Err(Error::from(ErrorKind::Unsupported))
+impl IsFolderToRemove for FileToFolderMatch {
+    fn is_folder_to_remove(&self, folder: &Folder) -> bool {
+        folder.as_ref().parent().map_or_else(
+            || false,
+            |parent| {
+                parent.join(self.file_to_check).exists()
+                    && parent
+                        .join(self.folder_to_remove)
+                        .starts_with(folder.as_ref())
+            },
+        )
     }
 }
 
@@ -212,18 +214,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn should_tell_if_folder_is_to_remove() {
-        let rule = FileToFolderMatch::new("Cargo.toml", "target");
-        let folder = Folder::try_from(Path::new("..").join("..")).unwrap();
-
-        assert!(rule.resolve_path_to_remove(folder).is_err());
-
-        let folder = Folder::try_from(Path::new(".").canonicalize().unwrap()).unwrap();
-        assert!(rule.resolve_path_to_remove(folder).is_ok());
+    fn should_size() {
+        assert_eq!(1_048_576, 1024 << 10);
     }
 
     #[test]
-    fn should_size() {
-        assert_eq!(1_048_576, 1024 << 10);
+    fn test_trait_is_folder_to_remove() {
+        let rule = FileToFolderMatch::new("Cargo.toml", "target");
+
+        let target_folder =
+            Folder::try_from(Path::new(".").canonicalize().unwrap().join("target")).unwrap();
+        assert!(rule.is_folder_to_remove(&target_folder));
+
+        let crate_root_folder = Folder::try_from(Path::new(".").canonicalize().unwrap()).unwrap();
+        assert!(!rule.is_folder_to_remove(&crate_root_folder));
     }
 }
