@@ -63,7 +63,7 @@ impl Folder {
 
         let size_amount = self.calculate_size();
         let size = size_amount.as_human_readable();
-        println!("{} ({})", self, size);
+        println!("{self} ({size})");
         println!(
             "  ├─ because of {}",
             PathBuf::from("..").join(rule.file_to_check).display()
@@ -72,14 +72,13 @@ impl Folder {
         let result = match decider.obtain_decision(ctx, "├─ delete directory recursively?") {
             Ok(Decision::Yes) => match cleaner.do_cleanup(self.as_ref())? {
                 Clean::Cleaned => {
-                    println!("  └─ deleted {}", size);
+                    println!("  └─ deleted {size}");
                     FolderProcessed::Cleaned(size_amount)
                 }
                 Clean::NotCleaned => {
                     println!(
-                        "  └─ not deleted{}{}",
-                        if ctx.is_dry_run { " [dry-run] " } else { "" },
-                        size
+                        "  └─ not deleted{}{size}",
+                        if ctx.is_dry_run { " [dry-run] " } else { "" }
                     );
                     FolderProcessed::Skipped
                 }
@@ -236,7 +235,7 @@ impl HumanReadable for usize {
             _ => (size as f64 / EXBIBYTE as f64, "EiB"),
         };
 
-        format!("{:.1}{}", size, symbol)
+        format!("{size:.1}{symbol}")
     }
 }
 
