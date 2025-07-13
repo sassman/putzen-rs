@@ -37,11 +37,11 @@ impl Decide for NiceInteractiveDecider {
         let suffix = if ctx.is_dry_run { " [dry-run]" } else { "" };
         Ok(self.decision_memory.as_ref().copied().unwrap_or_else(|| {
             if ctx.yes_to_all {
-                println!("  {}{} [yes by -y arg]", question.as_ref(), suffix);
+                println!("  {}{suffix} [yes by -y arg]", question.as_ref());
                 Decision::Yes
             } else {
                 Confirm::with_theme(&ColorfulTheme::default())
-                    .with_prompt(format!("{}{}", question.as_ref(), suffix,))
+                    .with_prompt(format!("{}{suffix}", question.as_ref()))
                     .default(false)
                     .show_default(true)
                     .wait_for_newline(false)
