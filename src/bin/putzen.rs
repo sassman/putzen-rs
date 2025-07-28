@@ -19,7 +19,7 @@ static FOLDER_TO_CLEANUP: [FileToFolderMatch; 3] = [
 
 #[derive(FromArgs)]
 /// help keeping your disk clean of build and dependency artifacts
-struct PurifyArgs {
+struct PutzenCliArgs {
     /// show the version number
     #[argh(switch, short = 'v')]
     version: bool,
@@ -46,26 +46,28 @@ struct PurifyArgs {
 }
 
 fn main() -> Result<()> {
-    let args: PurifyArgs = argh::from_env();
+    let args: PutzenCliArgs = argh::from_env();
     if args.version {
         println!("{} {}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
-        return Ok(());
+        Ok(())
+    } else {
+        visit_path(&args)
     }
-    visit_path(&args)
 }
 
-fn visit_path(args: &PurifyArgs) -> Result<()> {
+fn visit_path(args: &PutzenCliArgs) -> Result<()> {
     let to_clean = &FOLDER_TO_CLEANUP;
     let mut decider = NiceInteractiveDecider::default();
     let mut amount_cleaned = 0;
-    let ctx = DecisionContext {
-        is_dry_run: args.dry_run,
-        yes_to_all: args.yes_to_all,
-    };
     let folder = args
         .folder
         .canonicalize()
         .expect("Folder cannot be canonicalized.");
+    let ctx = DecisionContext {
+        working_dir: folder.clone(),
+        is_dry_run: args.dry_run,
+        yes_to_all: args.yes_to_all,
+    };
 
     let cleaner: Box<dyn DoCleanUp> = if args.dry_run {
         Box::new(DryRunCleaner)
@@ -73,7 +75,7 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
         Box::new(ProperCleaner)
     };
 
-    println!("Start cleaning at {}", folder.display());
+    ctx.println(format!("Start cleaning at {}", folder.display()));
     for folder in jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(folder)
         .skip_hidden(!args.dive_into_hidden_folders)
         .follow_links(args.follow)
@@ -120,9 +122,9 @@ fn visit_path(args: &PurifyArgs) -> Result<()> {
     }
 
     if amount_cleaned > 0 {
-        println!("Freed: {}", amount_cleaned.as_human_readable());
+        ctx.println(format!("Freed: {}", amount_cleaned.as_human_readable()));
     } else {
-        println!("No space freed ;-(");
+        ctx.println("No space freed ;-(");
     }
 
     Ok(())
@@ -156,7 +158,7 @@ mod tests {
         std::fs::File::create(second_node_root_folder.join("package.json")).unwrap();
         std::fs::File::create(nested_node_modules_folder.join("some_artefact")).unwrap();
 
-        let args = PurifyArgs {
+        let args = PutzenCliArgs {
             version: false,
             dry_run: false,
             yes_to_all: true,

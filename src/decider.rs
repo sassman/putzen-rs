@@ -1,6 +1,7 @@
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirm;
 use std::io::Result;
+use std::path::PathBuf;
 
 #[derive(Clone, Copy)]
 pub enum Decision {
@@ -9,10 +10,17 @@ pub enum Decision {
     Quit,
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Default)]
 pub struct DecisionContext {
     pub is_dry_run: bool,
     pub yes_to_all: bool,
+    pub working_dir: PathBuf,
+}
+
+impl DecisionContext {
+    pub fn println(&self, msg: impl AsRef<str>) {
+        println!("{}", msg.as_ref());
+    }
 }
 
 pub trait Decide {
@@ -37,7 +45,7 @@ impl Decide for NiceInteractiveDecider {
         let suffix = if ctx.is_dry_run { " [dry-run]" } else { "" };
         Ok(self.decision_memory.as_ref().copied().unwrap_or_else(|| {
             if ctx.yes_to_all {
-                println!("  {}{suffix} [yes by -y arg]", question.as_ref());
+                ctx.println(format!("  {}{suffix} [yes by -y arg]", question.as_ref()));
                 Decision::Yes
             } else {
                 Confirm::with_theme(&ColorfulTheme::default())
