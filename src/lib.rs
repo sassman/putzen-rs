@@ -63,36 +63,36 @@ impl Folder {
 
         let size_amount = self.calculate_size();
         let size = size_amount.as_human_readable();
-        println!("{self} ({size})");
-        println!(
+        ctx.println(format!("{self} ({size})"));
+        ctx.println(format!(
             "  ├─ because of {}",
             PathBuf::from("..").join(rule.file_to_check).display()
-        );
+        ));
 
         let result = match decider.obtain_decision(ctx, "├─ delete directory recursively?") {
             Ok(Decision::Yes) => match cleaner.do_cleanup(self.as_ref())? {
                 Clean::Cleaned => {
-                    println!("  └─ deleted {size}");
+                    ctx.println(format!("  └─ deleted {size}"));
                     FolderProcessed::Cleaned(size_amount)
                 }
                 Clean::NotCleaned => {
-                    println!(
+                    ctx.println(format!(
                         "  └─ not deleted{}{size}",
                         if ctx.is_dry_run { " [dry-run] " } else { "" }
-                    );
+                    ));
                     FolderProcessed::Skipped
                 }
             },
             Ok(Decision::Quit) => {
-                println!("  └─ quiting");
+                ctx.println("  └─ quiting");
                 FolderProcessed::Abort
             }
             _ => {
-                println!("  └─ skipped");
+                ctx.println("  └─ skipped");
                 FolderProcessed::Skipped
             }
         };
-        println!();
+        ctx.println("");
         Ok(result)
     }
 
