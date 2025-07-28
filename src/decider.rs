@@ -1,6 +1,7 @@
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirm;
 use std::io::Result;
+use std::path::PathBuf;
 
 #[derive(Clone, Copy)]
 pub enum Decision {
@@ -9,10 +10,11 @@ pub enum Decision {
     Quit,
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Default)]
 pub struct DecisionContext {
     pub is_dry_run: bool,
     pub yes_to_all: bool,
+    pub working_dir: PathBuf,
 }
 
 impl DecisionContext {

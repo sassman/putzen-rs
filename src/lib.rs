@@ -63,7 +63,21 @@ impl Folder {
 
         let size_amount = self.calculate_size();
         let size = size_amount.as_human_readable();
-        ctx.println(format!("{self} ({size})"));
+        let folder = self.as_ref().display().to_string();
+        let folder = ctx
+            .working_dir
+            .components()
+            .take(ctx.working_dir.components().count() - 1)
+            .fold(folder, |acc, component| {
+                // take only the first letter of each component and add it to the string
+                if let Some(s) = component.as_os_str().to_str() {
+                    acc.replace(s, s.chars().next().unwrap_or(' ').to_string().as_str())
+                } else {
+                    acc
+                }
+            });
+
+        ctx.println(format!("Cleaning {folder} with {size}"));
         ctx.println(format!(
             "  ├─ because of {}",
             PathBuf::from("..").join(rule.file_to_check).display()
