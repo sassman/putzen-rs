@@ -12,7 +12,7 @@ include = ["src/**/*", "LICENSE", "*.md"]
 
 [dependencies]
 argh = "0.1"
-dialoguer = "0.11"
+dialoguer = "0.12"
 jwalk = "0.8"
 
 [dev-dependencies]
