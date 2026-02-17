@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn test_python_cache_cleanup() {
         let root_folder = tempfile::TempDir::new().unwrap();
-        
+
         // Python __pycache__ with pyproject.toml
         let python_project = root_folder.path().join("python-app");
         std::fs::create_dir(&python_project).unwrap();
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn test_nodejs_framework_cache_cleanup() {
         let root_folder = tempfile::TempDir::new().unwrap();
-        
+
         // Next.js cache
         let next_folder = root_folder.path().join(".next");
         std::fs::create_dir(&next_folder).unwrap();
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     fn test_java_gradle_cache_cleanup() {
         let root_folder = tempfile::TempDir::new().unwrap();
-        
+
         // Gradle build folder with Kotlin DSL
         let build_folder = root_folder.path().join("build");
         std::fs::create_dir(&build_folder).unwrap();
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn test_java_maven_cache_cleanup() {
         let root_folder = tempfile::TempDir::new().unwrap();
-        
+
         // Maven target folder
         let target_folder = root_folder.path().join("target");
         std::fs::create_dir(&target_folder).unwrap();
