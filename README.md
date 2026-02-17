@@ -34,6 +34,7 @@ putzen supports cleaning artifacts for:
 | Python            | pyproject.toml/setup.py/requirements.txt | __pycache__     |
 | Python (pytest)   | pytest.ini/pyproject.toml     | .pytest_cache          |
 | Java/Kotlin (Gradle) | build.gradle/build.gradle.kts | build               |
+| Java/Kotlin (Maven)  | pom.xml                    | target                 |
 | CMake             | CMakeLists.txt                | build                  |
 
 furthermore, it does also support:
