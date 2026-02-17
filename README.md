@@ -25,11 +25,16 @@ It also does all this fast, means in parallel (if the filesystem supports it).
 
 putzen supports cleaning artifacts for:
 
-| type       | file that is checked | folder that is cleaned |
-|------------|----------------------|------------------------|
-| rust       | Cargo.toml           | target                 |
-| javascript | package.json         | node_modules           |
-| CMake      | CMakeLists.txt       | build                  |
+| type              | file that is checked          | folder that is cleaned |
+|-------------------|-------------------------------|------------------------|
+| Rust              | Cargo.toml                    | target                 |
+| Node.js/JavaScript| package.json                  | node_modules           |
+| Next.js           | next.config.js/ts             | .next                  |
+| Nuxt.js           | nuxt.config.js/ts             | .nuxt                  |
+| Python            | pyproject.toml/setup.py/requirements.txt | __pycache__     |
+| Python (pytest)   | pytest.ini/pyproject.toml     | .pytest_cache          |
+| Java/Kotlin (Gradle) | build.gradle/build.gradle.kts | build               |
+| CMake             | CMakeLists.txt                | build                  |
 
 furthermore, it does also support:
 - It can do run a dry-run (`-d`)
