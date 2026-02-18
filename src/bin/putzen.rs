@@ -11,28 +11,25 @@ use putzen_cli::{
 };
 
 /// all supported this to clean up
-static FOLDER_TO_CLEANUP: [FileToFolderMatch; 15] = [
+static FOLDER_TO_CLEANUP: [FileToFolderMatch; 9] = [
     // Rust
-    FileToFolderMatch::new("Cargo.toml", "target"),
+    FileToFolderMatch::new(&["Cargo.toml"], "target"),
     // Node.js / JavaScript
-    FileToFolderMatch::new("package.json", "node_modules"),
-    FileToFolderMatch::new("next.config.js", ".next"),
-    FileToFolderMatch::new("next.config.ts", ".next"),
-    FileToFolderMatch::new("nuxt.config.js", ".nuxt"),
-    FileToFolderMatch::new("nuxt.config.ts", ".nuxt"),
+    FileToFolderMatch::new(&["package.json"], "node_modules"),
+    FileToFolderMatch::new(&["next.config.js", "next.config.ts"], ".next"),
+    FileToFolderMatch::new(&["nuxt.config.js", "nuxt.config.ts"], ".nuxt"),
     // Python
-    FileToFolderMatch::new("pyproject.toml", "__pycache__"),
-    FileToFolderMatch::new("setup.py", "__pycache__"),
-    FileToFolderMatch::new("requirements.txt", "__pycache__"),
-    FileToFolderMatch::new("pytest.ini", ".pytest_cache"),
-    FileToFolderMatch::new("pyproject.toml", ".pytest_cache"),
+    FileToFolderMatch::new(
+        &["pyproject.toml", "setup.py", "requirements.txt"],
+        "__pycache__",
+    ),
+    FileToFolderMatch::new(&["pytest.ini", "pyproject.toml"], ".pytest_cache"),
     // Java / Kotlin (Gradle)
-    FileToFolderMatch::new("build.gradle", "build"),
-    FileToFolderMatch::new("build.gradle.kts", "build"),
+    FileToFolderMatch::new(&["build.gradle", "build.gradle.kts"], "build"),
     // Java / Kotlin (Maven)
-    FileToFolderMatch::new("pom.xml", "target"),
+    FileToFolderMatch::new(&["pom.xml"], "target"),
     // CMake (already supported)
-    FileToFolderMatch::new("CMakeLists.txt", "build"),
+    FileToFolderMatch::new(&["CMakeLists.txt"], "build"),
 ];
 
 #[derive(FromArgs)]
