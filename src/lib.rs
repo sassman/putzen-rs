@@ -92,7 +92,7 @@ impl Folder {
         ctx.println(format!("Cleaning {folder} with {size}"));
         let matching_file = rule
             .get_matching_file(self.as_ref().parent().unwrap_or(self.as_ref()))
-            .unwrap_or(rule.files_to_check.first().unwrap_or(&""));
+            .unwrap_or(rule.files_to_check[0]);
         ctx.println(format!(
             "  ├─ because of {}",
             PathBuf::from("..").join(matching_file).display()
@@ -205,13 +205,12 @@ impl PathToRemoveResolver for FileToFolderMatch {
     fn resolve_path_to_remove(&self, folder: impl AsRef<Path>) -> Result<Folder> {
         let folder = folder.as_ref();
 
-        // Check if any of the marker files exist
-        let has_marker = self
+        // Check if any of the marker files exist and the target folder exists
+        if self
             .files_to_check
             .iter()
-            .any(|&file| folder.join(file).exists());
-
-        if has_marker {
+            .any(|&file| folder.join(file).exists())
+        {
             let path_to_remove = folder.join(self.folder_to_remove);
             if path_to_remove.exists() {
                 return path_to_remove.try_into();
@@ -237,12 +236,9 @@ impl IsFolderToRemove for FileToFolderMatch {
             || false,
             |parent| {
                 // Check if any of the marker files exist
-                let has_marker = self
-                    .files_to_check
+                self.files_to_check
                     .iter()
-                    .any(|&file| parent.join(file).exists());
-
-                has_marker
+                    .any(|&file| parent.join(file).exists())
                     && parent
                         .join(self.folder_to_remove)
                         .starts_with(folder.as_ref())
