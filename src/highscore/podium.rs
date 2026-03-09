@@ -35,13 +35,13 @@ impl Podium {
     /// Returns the medal that would be earned, or None.
     pub fn would_place(&self, size: u64) -> Option<Medal> {
         match (&self.gold, &self.silver, &self.bronze) {
-            (None, _, _)                        => Some(Medal::Gold),
-            (Some(g), _, _) if size > g.size    => Some(Medal::Gold),
-            (_, None, _)                        => Some(Medal::Silver),
-            (_, Some(s), _) if size > s.size    => Some(Medal::Silver),
-            (_, _, None)                        => Some(Medal::Bronze),
-            (_, _, Some(b)) if size > b.size    => Some(Medal::Bronze),
-            _                                   => None,
+            (None, _, _) => Some(Medal::Gold),
+            (Some(g), _, _) if size > g.size => Some(Medal::Gold),
+            (_, None, _) => Some(Medal::Silver),
+            (_, Some(s), _) if size > s.size => Some(Medal::Silver),
+            (_, _, None) => Some(Medal::Bronze),
+            (_, _, Some(b)) if size > b.size => Some(Medal::Bronze),
+            _ => None,
         }
     }
 

@@ -1,9 +1,9 @@
 pub mod display;
 pub mod podium;
 
-use crate::observer::RunObserver;
-use crate::highscore::display::{EarnedMedal, TrackName, render_medals, inline_hint};
+use crate::highscore::display::{inline_hint, render_medals, EarnedMedal, TrackName};
 use crate::highscore::podium::Podium;
+use crate::observer::RunObserver;
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -65,11 +65,12 @@ impl HighscoreObserver {
     }
 
     fn highscores_path() -> std::io::Result<PathBuf> {
-        let config_dir = dirs_lite::config_dir()
-            .ok_or_else(|| std::io::Error::new(
+        let config_dir = dirs_lite::config_dir().ok_or_else(|| {
+            std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 "Could not determine config directory",
-            ))?;
+            )
+        })?;
         Ok(config_dir.join("putzen").join("highscores.toml"))
     }
 
@@ -81,8 +82,7 @@ impl HighscoreObserver {
         if let Some(parent) = self.file_path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let content = toml::to_string_pretty(&self.highscores)
-            .map_err(std::io::Error::other)?;
+        let content = toml::to_string_pretty(&self.highscores).map_err(std::io::Error::other)?;
         fs::write(&self.file_path, content)
     }
 }

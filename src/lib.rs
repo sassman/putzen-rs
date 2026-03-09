@@ -1,8 +1,8 @@
 mod cleaner;
 mod decider;
-mod observer;
 #[cfg(feature = "highscore-board")]
 mod highscore;
+mod observer;
 #[cfg(feature = "highscore-board")]
 pub use crate::highscore::HighscoreObserver;
 

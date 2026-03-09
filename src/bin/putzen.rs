@@ -81,9 +81,13 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
 
     let mut observer: Box<dyn RunObserver> = if !args.dry_run {
         #[cfg(feature = "highscore-board")]
-        { Box::new(HighscoreObserver::load()?) }
+        {
+            Box::new(HighscoreObserver::load()?)
+        }
         #[cfg(not(feature = "highscore-board"))]
-        { Box::new(NoOpObserver) }
+        {
+            Box::new(NoOpObserver)
+        }
     } else {
         Box::new(NoOpObserver)
     };
