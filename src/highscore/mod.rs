@@ -21,7 +21,6 @@ pub struct HighscoreObserver {
     highscores: Highscores,
     earned_medals: Vec<EarnedMedal>,
     file_path: PathBuf,
-    is_first_run: bool,
 }
 
 impl HighscoreObserver {
@@ -37,30 +36,31 @@ impl HighscoreObserver {
             (Highscores::default(), true)
         };
 
+        if is_first_run {
+            println!("\u{1F3C6} A wild cleaner appears! Highscore board initialized.");
+        }
+
         Ok(Self {
             highscores,
             earned_medals: Vec::new(),
             file_path,
-            is_first_run,
         })
     }
 
-    /// Load from an explicit path (for testing).
+    /// Load from an explicit path (for testing, no first-run message).
     pub fn load_from(file_path: PathBuf) -> std::io::Result<Self> {
-        let (highscores, is_first_run) = if file_path.exists() {
+        let highscores = if file_path.exists() {
             let content = fs::read_to_string(&file_path)?;
-            let highscores: Highscores = toml::from_str(&content)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-            (highscores, false)
+            toml::from_str(&content)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?
         } else {
-            (Highscores::default(), true)
+            Highscores::default()
         };
 
         Ok(Self {
             highscores,
             earned_medals: Vec::new(),
             file_path,
-            is_first_run,
         })
     }
 
@@ -101,10 +101,6 @@ impl RunObserver for HighscoreObserver {
     }
 
     fn on_run_complete(&mut self, total: u64) -> Option<String> {
-        if self.is_first_run {
-            println!("\u{1F3C6} A wild cleaner appears! Highscore board initialized.");
-        }
-
         // Check total run highscore (skip if nothing was cleaned)
         if total > 0 {
             if let Some(medal) = self.highscores.total_run.would_place(total) {
@@ -178,7 +174,6 @@ mod tests {
         // First run
         {
             let mut observer = HighscoreObserver::load_from(path.clone()).unwrap();
-            assert!(observer.is_first_run);
             observer.on_folder_cleaned(5000);
             observer.on_run_complete(5000);
         }
@@ -186,7 +181,6 @@ mod tests {
         // Second run — should load saved data
         {
             let mut observer = HighscoreObserver::load_from(path).unwrap();
-            assert!(!observer.is_first_run);
             // 5000 is gold, so 3000 should place silver
             let hint = observer.on_folder_cleaned(3000);
             assert!(hint.is_some());
@@ -194,10 +188,13 @@ mod tests {
     }
 
     #[test]
-    fn first_run_flag_detected() {
+    fn first_run_creates_file_on_save() {
         let dir = tempfile::TempDir::new().unwrap();
         let path = dir.path().join("highscores.toml");
-        let observer = HighscoreObserver::load_from(path).unwrap();
-        assert!(observer.is_first_run);
+        assert!(!path.exists());
+        let mut observer = HighscoreObserver::load_from(path.clone()).unwrap();
+        observer.on_folder_cleaned(1000);
+        observer.on_run_complete(1000);
+        assert!(path.exists());
     }
 }
