@@ -7,6 +7,16 @@ pub enum Medal {
     Bronze,
 }
 
+impl Medal {
+    pub fn sort_key(self) -> u8 {
+        match self {
+            Medal::Gold => 0,
+            Medal::Silver => 1,
+            Medal::Bronze => 2,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Record {
     pub size: u64,

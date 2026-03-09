@@ -8,6 +8,15 @@ pub enum TrackName {
     TotalRun,
 }
 
+impl TrackName {
+    pub fn sort_key(self) -> u8 {
+        match self {
+            TrackName::SingleCleanup => 0,
+            TrackName::TotalRun => 1,
+        }
+    }
+}
+
 impl std::fmt::Display for TrackName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -55,11 +64,15 @@ fn render_medal(earned: &EarnedMedal) -> String {
 }
 
 /// Render all earned medals into a single display string.
+/// Medals are sorted by track (Single cleanup first, then Total run),
+/// then by medal rank (Gold, Silver, Bronze) within each track.
 pub fn render_medals(medals: &[EarnedMedal]) -> Option<String> {
     if medals.is_empty() {
         return None;
     }
-    let output: String = medals.iter().map(render_medal).collect();
+    let mut sorted: Vec<&EarnedMedal> = medals.iter().collect();
+    sorted.sort_by_key(|m| (m.track.sort_key(), m.medal.sort_key()));
+    let output: String = sorted.iter().map(|m| render_medal(m)).collect();
     Some(output)
 }
 
@@ -104,6 +117,40 @@ mod tests {
         // Should contain both medals
         assert!(output.contains("Gold"));
         assert!(output.contains("Silver"));
+    }
+
+    #[test]
+    fn render_medals_sorted_by_track_then_rank() {
+        let medals = vec![
+            EarnedMedal {
+                medal: Medal::Gold,
+                track: TrackName::SingleCleanup,
+                size: 3_000_000_000,
+            },
+            EarnedMedal {
+                medal: Medal::Bronze,
+                track: TrackName::SingleCleanup,
+                size: 500_000_000,
+            },
+            EarnedMedal {
+                medal: Medal::Silver,
+                track: TrackName::SingleCleanup,
+                size: 2_000_000_000,
+            },
+            EarnedMedal {
+                medal: Medal::Gold,
+                track: TrackName::TotalRun,
+                size: 5_500_000_000,
+            },
+        ];
+        let output = render_medals(&medals).unwrap();
+        let gold_pos = output.find("Gold \u{00B7} Single").unwrap();
+        let silver_pos = output.find("Silver \u{00B7} Single").unwrap();
+        let bronze_pos = output.find("Bronze \u{00B7} Single").unwrap();
+        let total_pos = output.find("Gold \u{00B7} Total").unwrap();
+        assert!(gold_pos < silver_pos);
+        assert!(silver_pos < bronze_pos);
+        assert!(bronze_pos < total_pos);
     }
 
     #[test]
