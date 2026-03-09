@@ -1,8 +1,10 @@
 mod cleaner;
 mod decider;
+mod observer;
 
 pub use crate::cleaner::*;
 pub use crate::decider::*;
+pub use crate::observer::*;
 
 use jwalk::{ClientState, DirEntry, Parallelism};
 use std::convert::{TryFrom, TryInto};
