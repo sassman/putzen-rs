@@ -124,7 +124,7 @@ mod tests {
     }
 
     #[test]
-    fn equal_size_does_not_place() {
+    fn equal_size_places_in_next_empty_slot() {
         let mut podium = Podium::default();
         podium.place(100, "2026-03-01");
         // Equal to gold should place silver (empty slot)

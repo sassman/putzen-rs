@@ -136,11 +136,12 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
 
     if amount_cleaned > 0 {
         ctx.println(format!("Freed: {}", amount_cleaned.as_human_readable()));
-        if let Some(medals) = observer.on_run_complete(amount_cleaned as u64) {
-            println!("{medals}");
-        }
     } else {
         ctx.println("No space freed ;-(");
+    }
+
+    if let Some(medals) = observer.on_run_complete(amount_cleaned as u64) {
+        println!("{medals}");
     }
 
     Ok(())

@@ -105,15 +105,17 @@ impl RunObserver for HighscoreObserver {
             println!("\u{1F3C6} A wild cleaner appears! Highscore board initialized.");
         }
 
-        // Check total run highscore
-        if let Some(medal) = self.highscores.total_run.would_place(total) {
-            let date = Self::today();
-            self.highscores.total_run.place(total, &date);
-            self.earned_medals.push(EarnedMedal {
-                medal,
-                track: TrackName::TotalRun,
-                size: total,
-            });
+        // Check total run highscore (skip if nothing was cleaned)
+        if total > 0 {
+            if let Some(medal) = self.highscores.total_run.would_place(total) {
+                let date = Self::today();
+                self.highscores.total_run.place(total, &date);
+                self.earned_medals.push(EarnedMedal {
+                    medal,
+                    track: TrackName::TotalRun,
+                    size: total,
+                });
+            }
         }
 
         // Save to disk (best effort — don't fail the run)
