@@ -7,8 +7,12 @@ use jwalk::Parallelism;
 
 use putzen_cli::{
     DecisionContext, DoCleanUp, DryRunCleaner, FileToFolderMatch, Folder, FolderProcessed,
-    HumanReadable, IsFolderToRemove, NiceInteractiveDecider, ProperCleaner,
+    HumanReadable, IsFolderToRemove, NiceInteractiveDecider, NoOpObserver, ProperCleaner,
+    RunObserver,
 };
+
+#[cfg(feature = "highscore-board")]
+use putzen_cli::HighscoreObserver;
 
 /// all supported this to clean up
 static FOLDER_TO_CLEANUP: [FileToFolderMatch; 3] = [
@@ -75,6 +79,15 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
         Box::new(ProperCleaner)
     };
 
+    let mut observer: Box<dyn RunObserver> = if !args.dry_run {
+        #[cfg(feature = "highscore-board")]
+        { Box::new(HighscoreObserver::load()?) }
+        #[cfg(not(feature = "highscore-board"))]
+        { Box::new(NoOpObserver) }
+    } else {
+        Box::new(NoOpObserver)
+    };
+
     ctx.println(format!("Start cleaning at {}", folder.display()));
     for folder in jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(folder)
         .skip_hidden(!args.dive_into_hidden_folders)
@@ -107,7 +120,7 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
         .filter_map(|f| f.client_state)
     {
         'rules: for rule in to_clean {
-            let result = folder.accept(&ctx, rule, &*cleaner, &mut decider);
+            let result = folder.accept(&ctx, rule, &*cleaner, &mut decider, &mut *observer);
             match result {
                 Ok(FolderProcessed::Abort) => return Ok(()),
                 Ok(FolderProcessed::Cleaned(size)) => {
@@ -123,6 +136,9 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
 
     if amount_cleaned > 0 {
         ctx.println(format!("Freed: {}", amount_cleaned.as_human_readable()));
+        if let Some(medals) = observer.on_run_complete(amount_cleaned as u64) {
+            println!("{medals}");
+        }
     } else {
         ctx.println("No space freed ;-(");
     }

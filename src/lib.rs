@@ -61,6 +61,7 @@ impl Folder {
         rule: &FileToFolderMatch,
         cleaner: &dyn DoCleanUp,
         decider: &mut impl Decide,
+        observer: &mut dyn RunObserver,
     ) -> Result<FolderProcessed> {
         // better double check here
         if !rule.is_folder_to_remove(self) {
@@ -92,6 +93,9 @@ impl Folder {
         let result = match decider.obtain_decision(ctx, "├─ delete directory recursively?") {
             Ok(Decision::Yes) => match cleaner.do_cleanup(self.as_ref())? {
                 Clean::Cleaned => {
+                    if let Some(hint) = observer.on_folder_cleaned(size_amount as u64) {
+                        ctx.println(format!("  ├─ {hint}"));
+                    }
                     ctx.println(format!("  └─ deleted {size}"));
                     FolderProcessed::Cleaned(size_amount)
                 }
