@@ -82,7 +82,7 @@ impl HighscoreObserver {
             fs::create_dir_all(parent)?;
         }
         let content = toml::to_string_pretty(&self.highscores)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .map_err(std::io::Error::other)?;
         fs::write(&self.file_path, content)
     }
 }
