@@ -2,7 +2,7 @@ use crate::highscore::podium::Medal;
 use crate::HumanReadable;
 
 /// The name of a highscore track, used in display output.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrackName {
     SingleCleanup,
     TotalRun,
