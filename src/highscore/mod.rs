@@ -2,12 +2,44 @@ pub mod display;
 pub mod podium;
 
 use crate::highscore::display::{inline_hint, render_medals, EarnedMedal, TrackName};
-use crate::highscore::podium::Podium;
+use crate::highscore::podium::{Medal, Podium};
 use crate::observer::RunObserver;
 
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+
+/// Mirror `Podium::place` bumping logic on earned medals for a given track.
+/// When a new medal is placed, existing earned medals shift down one tier
+/// and any that fall off the podium are removed.
+fn bump_earned_medals(earned: &mut Vec<EarnedMedal>, track: TrackName, new_medal: Medal) {
+    match new_medal {
+        Medal::Gold => {
+            earned.retain(|m| !(m.track == track && m.medal == Medal::Bronze));
+            for m in earned.iter_mut() {
+                if m.track == track && m.medal == Medal::Silver {
+                    m.medal = Medal::Bronze;
+                }
+            }
+            for m in earned.iter_mut() {
+                if m.track == track && m.medal == Medal::Gold {
+                    m.medal = Medal::Silver;
+                }
+            }
+        }
+        Medal::Silver => {
+            earned.retain(|m| !(m.track == track && m.medal == Medal::Bronze));
+            for m in earned.iter_mut() {
+                if m.track == track && m.medal == Medal::Silver {
+                    m.medal = Medal::Bronze;
+                }
+            }
+        }
+        Medal::Bronze => {
+            earned.retain(|m| !(m.track == track && m.medal == Medal::Bronze));
+        }
+    }
+}
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Highscores {
@@ -92,6 +124,7 @@ impl RunObserver for HighscoreObserver {
         let medal = self.highscores.single_cleanup.would_place(size)?;
         let date = Self::today();
         self.highscores.single_cleanup.place(size, &date);
+        bump_earned_medals(&mut self.earned_medals, TrackName::SingleCleanup, medal);
         self.earned_medals.push(EarnedMedal {
             medal,
             track: TrackName::SingleCleanup,
@@ -106,6 +139,7 @@ impl RunObserver for HighscoreObserver {
             if let Some(medal) = self.highscores.total_run.would_place(total) {
                 let date = Self::today();
                 self.highscores.total_run.place(total, &date);
+                bump_earned_medals(&mut self.earned_medals, TrackName::TotalRun, medal);
                 self.earned_medals.push(EarnedMedal {
                     medal,
                     track: TrackName::TotalRun,
@@ -185,6 +219,30 @@ mod tests {
             let hint = observer.on_folder_cleaned(3000);
             assert!(hint.is_some());
         }
+    }
+
+    #[test]
+    fn many_increasing_cleanups_produce_at_most_three_medals_per_track() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("highscores.toml");
+        let mut observer = HighscoreObserver::load_from(path).unwrap();
+
+        // Simulate 10 folders of increasing size — each beats the previous gold
+        for i in 1..=10 {
+            observer.on_folder_cleaned(i * 1000);
+        }
+
+        let output = observer.on_run_complete(55_000);
+        let text = output.unwrap();
+
+        // Should have at most 3 single-cleanup medals + 1 total-run medal
+        assert_eq!(text.matches("Single cleanup").count(), 3);
+        assert_eq!(text.matches("Total run").count(), 1);
+
+        // Exactly 1 gold, 1 silver, 1 bronze for single cleanup
+        assert_eq!(text.matches("Gold \u{00B7} Single").count(), 1);
+        assert_eq!(text.matches("Silver \u{00B7} Single").count(), 1);
+        assert_eq!(text.matches("Bronze \u{00B7} Single").count(), 1);
     }
 
     #[test]
