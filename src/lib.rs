@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 pub struct FileToFolderMatch {
-    file_to_check: &'static str,
+    files_to_check: &'static [&'static str],
     folder_to_remove: &'static str,
 }
 
@@ -34,9 +34,12 @@ pub enum FolderProcessed {
 }
 
 impl FileToFolderMatch {
-    pub const fn new(file_to_check: &'static str, folder_to_remove: &'static str) -> Self {
+    pub const fn new(
+        files_to_check: &'static [&'static str],
+        folder_to_remove: &'static str,
+    ) -> Self {
         Self {
-            file_to_check,
+            files_to_check,
             folder_to_remove,
         }
     }
@@ -48,6 +51,15 @@ impl FileToFolderMatch {
             .canonicalize()
             .map(|x| x.join(self.folder_to_remove))
             .ok()
+    }
+
+    /// Returns the first matching file from the files_to_check list that exists in the given folder
+    fn get_matching_file(&self, folder: impl AsRef<Path>) -> Option<&'static str> {
+        let folder = folder.as_ref();
+        self.files_to_check
+            .iter()
+            .find(|&&file| folder.join(file).exists())
+            .copied()
     }
 }
 
@@ -85,9 +97,12 @@ impl Folder {
             });
 
         ctx.println(format!("Cleaning {folder} with {size}"));
+        let matching_file = rule
+            .get_matching_file(self.as_ref().parent().unwrap_or(self.as_ref()))
+            .unwrap_or(rule.files_to_check[0]);
         ctx.println(format!(
             "  ├─ because of {}",
-            PathBuf::from("..").join(rule.file_to_check).display()
+            PathBuf::from("..").join(matching_file).display()
         ));
 
         let result = match decider.obtain_decision(ctx, "├─ delete directory recursively?") {
@@ -199,9 +214,13 @@ pub trait PathToRemoveResolver {
 impl PathToRemoveResolver for FileToFolderMatch {
     fn resolve_path_to_remove(&self, folder: impl AsRef<Path>) -> Result<Folder> {
         let folder = folder.as_ref();
-        let file_to_check = folder.join(self.file_to_check);
 
-        if file_to_check.exists() {
+        // Check if any of the marker files exist and the target folder exists
+        if self
+            .files_to_check
+            .iter()
+            .any(|&file| folder.join(file).exists())
+        {
             let path_to_remove = folder.join(self.folder_to_remove);
             if path_to_remove.exists() {
                 return path_to_remove.try_into();
@@ -226,7 +245,10 @@ impl IsFolderToRemove for FileToFolderMatch {
         folder.as_ref().parent().map_or_else(
             || false,
             |parent| {
-                parent.join(self.file_to_check).exists()
+                // Check if any of the marker files exist
+                self.files_to_check
+                    .iter()
+                    .any(|&file| parent.join(file).exists())
                     && parent
                         .join(self.folder_to_remove)
                         .starts_with(folder.as_ref())
@@ -274,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_trait_is_folder_to_remove() {
-        let rule = FileToFolderMatch::new("Cargo.toml", "target");
+        let rule = FileToFolderMatch::new(&["Cargo.toml"], "target");
 
         let target_folder =
             Folder::try_from(Path::new(".").canonicalize().unwrap().join("target")).unwrap();
