@@ -161,9 +161,9 @@ dependencies = [
 
 [[package]]
 name = "dirs-lite"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74686c64be1b36b2f1a7f250f5e363fa2da841dff4c8330224cd46e54cd9b65e"
+checksum = "70377eaab9803482dd96f7c1728f3dae00cc4a5b1185e100befd2f28a2fed291"
 
 [[package]]
 name = "either"
