@@ -6,7 +6,6 @@
 [![crates.io](https://img.shields.io/crates/v/putzen-cli.svg)](https://crates.io/crates/putzen-cli)
 [![dependency status](https://deps.rs/repo/github/sassman/putzen-rs/status.svg)](https://deps.rs/repo/github/sassman/putzen-rs)
 [![Build Status](https://github.com/sassman/putzen-rs/workflows/Build/badge.svg)](https://github.com/sassman/putzen-rs/actions?query=branch%3Amain+workflow%3ABuild+)
-[![LOC](https://tokei.rs/b1/github/sassman/putzen-rs?category=code)](https://tokei.rs/b1/github/sassman/putzen-rs?category=code)
 
 "putzen" is German and means cleaning. It helps keeping your disk clean of build and dependency artifacts safely.
 
