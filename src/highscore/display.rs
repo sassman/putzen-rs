@@ -124,11 +124,11 @@ pub fn render_board(highscores: &Highscores) -> String {
     let mut out = String::new();
     for (track, podium) in [
         (TrackName::SingleCleanup, &highscores.single_cleanup),
-        (TrackName::TotalRun,       &highscores.total_run),
+        (TrackName::TotalRun, &highscores.total_run),
     ] {
         let title = match track {
             TrackName::SingleCleanup => "SINGLE CLEANUP",
-            TrackName::TotalRun       => "TOTAL RUN",
+            TrackName::TotalRun => "TOTAL RUN",
         };
         out.push('\n');
         out.push_str(&banner_header(title));
@@ -256,7 +256,10 @@ mod tests {
     use crate::highscore::podium::Podium;
 
     fn populated_record(size: u64, date: &str) -> Record {
-        Record { size, date: date.to_string() }
+        Record {
+            size,
+            date: date.to_string(),
+        }
     }
 
     #[test]
@@ -275,21 +278,22 @@ mod tests {
 
     #[test]
     fn render_board_fully_populated_shows_all_records() {
-        let mut highscores = Highscores::default();
-        highscores.single_cleanup = Podium {
-            gold:   Some(populated_record(3_000_000_000, "2026-03-15")),
-            silver: Some(populated_record(2_000_000_000, "2026-02-01")),
-            bronze: Some(populated_record(1_000_000_000, "2026-01-20")),
-        };
-        highscores.total_run = Podium {
-            gold:   Some(populated_record(5_500_000_000, "2026-03-15")),
-            silver: Some(populated_record(3_300_000_000, "2026-02-14")),
-            bronze: Some(populated_record(1_100_000_000, "2026-01-10")),
+        let highscores = Highscores {
+            single_cleanup: Podium {
+                gold: Some(populated_record(3_000_000_000, "2026-03-15")),
+                silver: Some(populated_record(2_000_000_000, "2026-02-01")),
+                bronze: Some(populated_record(1_000_000_000, "2026-01-20")),
+            },
+            total_run: Podium {
+                gold: Some(populated_record(5_500_000_000, "2026-03-15")),
+                silver: Some(populated_record(3_300_000_000, "2026-02-14")),
+                bronze: Some(populated_record(1_100_000_000, "2026-01-10")),
+            },
         };
         let out = render_board(&highscores);
         assert!(out.contains("SINGLE CLEANUP"));
         assert!(out.contains("TOTAL RUN"));
-        assert_eq!(out.matches("Gold").count(),   2);
+        assert_eq!(out.matches("Gold").count(), 2);
         assert_eq!(out.matches("Silver").count(), 2);
         assert_eq!(out.matches("Bronze").count(), 2);
         // Dates appear somewhere in the output
@@ -301,11 +305,13 @@ mod tests {
 
     #[test]
     fn render_board_partial_track_mixes_populated_and_open() {
-        let mut highscores = Highscores::default();
-        highscores.single_cleanup = Podium {
-            gold:   Some(populated_record(1_073_741_824, "2026-03-15")),
-            silver: None,
-            bronze: None,
+        let highscores = Highscores {
+            single_cleanup: Podium {
+                gold: Some(populated_record(1_073_741_824, "2026-03-15")),
+                silver: None,
+                bronze: None,
+            },
+            ..Default::default()
         };
         let out = render_board(&highscores);
         // Gold is populated → size + date appear
