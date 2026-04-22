@@ -1,6 +1,8 @@
 pub mod display;
 pub mod podium;
 
+pub use display::render_board;
+
 use crate::highscore::display::{inline_hint, render_medals, EarnedMedal, TrackName};
 use crate::highscore::podium::{Medal, Podium};
 use crate::observer::RunObserver;
