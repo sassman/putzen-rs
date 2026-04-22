@@ -1,4 +1,5 @@
 use crate::highscore::podium::{Medal, Record};
+use crate::highscore::Highscores;
 use crate::HumanReadable;
 
 /// The name of a highscore track, used in display output.
@@ -116,6 +117,38 @@ fn render_board_slot(medal: Medal, record: Option<&Record>) -> String {
     )
 }
 
+/// Render the full two-track highscore board.
+/// Format: per-track banner header, three slots (gold/silver/bronze) each
+/// separated by a banner_rule, blank line between tracks.
+pub fn render_board(highscores: &Highscores) -> String {
+    let mut out = String::new();
+    for (track, podium) in [
+        (TrackName::SingleCleanup, &highscores.single_cleanup),
+        (TrackName::TotalRun,       &highscores.total_run),
+    ] {
+        let title = match track {
+            TrackName::SingleCleanup => "SINGLE CLEANUP",
+            TrackName::TotalRun       => "TOTAL RUN",
+        };
+        out.push('\n');
+        out.push_str(&banner_header(title));
+        out.push('\n');
+        out.push_str(&render_board_slot(Medal::Gold, podium.gold.as_ref()));
+        out.push('\n');
+        out.push_str(banner_rule());
+        out.push('\n');
+        out.push_str(&render_board_slot(Medal::Silver, podium.silver.as_ref()));
+        out.push('\n');
+        out.push_str(banner_rule());
+        out.push('\n');
+        out.push_str(&render_board_slot(Medal::Bronze, podium.bronze.as_ref()));
+        out.push('\n');
+        out.push_str(banner_rule());
+        out.push('\n');
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -218,5 +251,67 @@ mod tests {
         assert!(out.contains("Silver"));
         assert!(out.contains("open"));
         assert!(out.contains("be the first"));
+    }
+
+    use crate::highscore::podium::Podium;
+
+    fn populated_record(size: u64, date: &str) -> Record {
+        Record { size, date: date.to_string() }
+    }
+
+    #[test]
+    fn render_board_empty_highscores_shows_all_open() {
+        let highscores = Highscores::default();
+        let out = render_board(&highscores);
+        assert!(out.contains("SINGLE CLEANUP"));
+        assert!(out.contains("TOTAL RUN"));
+        // Six "open" markers — three per track
+        assert_eq!(out.matches("(open").count(), 6);
+        // No size units should appear when nothing is populated
+        assert!(!out.contains("GiB"));
+        assert!(!out.contains("MiB"));
+        assert!(!out.contains("KiB"));
+    }
+
+    #[test]
+    fn render_board_fully_populated_shows_all_records() {
+        let mut highscores = Highscores::default();
+        highscores.single_cleanup = Podium {
+            gold:   Some(populated_record(3_000_000_000, "2026-03-15")),
+            silver: Some(populated_record(2_000_000_000, "2026-02-01")),
+            bronze: Some(populated_record(1_000_000_000, "2026-01-20")),
+        };
+        highscores.total_run = Podium {
+            gold:   Some(populated_record(5_500_000_000, "2026-03-15")),
+            silver: Some(populated_record(3_300_000_000, "2026-02-14")),
+            bronze: Some(populated_record(1_100_000_000, "2026-01-10")),
+        };
+        let out = render_board(&highscores);
+        assert!(out.contains("SINGLE CLEANUP"));
+        assert!(out.contains("TOTAL RUN"));
+        assert_eq!(out.matches("Gold").count(),   2);
+        assert_eq!(out.matches("Silver").count(), 2);
+        assert_eq!(out.matches("Bronze").count(), 2);
+        // Dates appear somewhere in the output
+        assert!(out.contains("2026-03-15"));
+        assert!(out.contains("2026-01-10"));
+        // No open markers when everything is populated
+        assert_eq!(out.matches("(open").count(), 0);
+    }
+
+    #[test]
+    fn render_board_partial_track_mixes_populated_and_open() {
+        let mut highscores = Highscores::default();
+        highscores.single_cleanup = Podium {
+            gold:   Some(populated_record(1_073_741_824, "2026-03-15")),
+            silver: None,
+            bronze: None,
+        };
+        let out = render_board(&highscores);
+        // Gold is populated → size + date appear
+        assert!(out.contains("1.0GiB"));
+        assert!(out.contains("2026-03-15"));
+        // 5 open markers: silver+bronze of single-cleanup, all 3 of total-run
+        assert_eq!(out.matches("(open").count(), 5);
     }
 }
