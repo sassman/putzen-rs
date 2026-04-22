@@ -68,7 +68,10 @@ impl Medal {
 /// Banner header line, e.g. `   ──── ★ NEW HIGHSCORE ★ ────`.
 fn banner_header(title: &str) -> String {
     let side = STROKE.repeat(HEADER_SIDE_STROKES);
-    format!("{}{} {} {} {} {}", BANNER_INDENT, side, STAR, title, STAR, side)
+    format!(
+        "{}{} {} {} {} {}",
+        BANNER_INDENT, side, STAR, title, STAR, side
+    )
 }
 
 /// Horizontal rule used as the bottom of a banner / separator between slots.
@@ -116,7 +119,7 @@ fn center_pad(s: &str, width: usize) -> String {
         return s.to_string();
     }
     let diff = width - len;
-    let left = (diff + 1) / 2;
+    let left = (diff + 1).div_ceil(2);
     let right = diff / 2;
     format!("{}{}{}", " ".repeat(left), s, " ".repeat(right))
 }
@@ -136,12 +139,7 @@ fn render_board_slot(medal: Medal, record: Option<&Record>) -> String {
     };
     // Rule is 31 cols wide; medal emoji sits 2 cols in from the stroke
     // start, so right-align detail to 29 cols to mirror that margin.
-    format!(
-        "     {} {}\n{:>29}",
-        medal.emoji(),
-        medal.label(),
-        detail,
-    )
+    format!("     {} {}\n{:>29}", medal.emoji(), medal.label(), detail,)
 }
 
 /// Render the full two-track highscore board.
@@ -152,11 +150,7 @@ pub fn render_board(highscores: &Highscores) -> String {
         ("SINGLE CLEANUP", &highscores.single_cleanup),
         ("TOTAL RUN", &highscores.total_run),
     ];
-    let title_width = tracks
-        .iter()
-        .map(|(t, _)| t.chars().count())
-        .max()
-        .unwrap();
+    let title_width = tracks.iter().map(|(t, _)| t.chars().count()).max().unwrap();
 
     let mut out = String::new();
     for (title, podium) in tracks {
