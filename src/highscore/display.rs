@@ -1,4 +1,4 @@
-use crate::highscore::podium::Medal;
+use crate::highscore::podium::{Medal, Record};
 use crate::HumanReadable;
 
 /// The name of a highscore track, used in display output.
@@ -96,6 +96,26 @@ pub fn inline_hint() -> String {
     "\u{1F3C6} new highscore!".to_string() // 🏆 new highscore!
 }
 
+/// Render one medal slot of the highscore board.
+/// `record: None` renders an "open" placeholder.
+/// The caller is responsible for any surrounding banner_header / banner_rule.
+fn render_board_slot(medal: Medal, record: Option<&Record>) -> String {
+    let detail = match record {
+        Some(r) => format!(
+            "{} \u{00B7} {}",
+            (r.size as usize).as_human_readable(),
+            r.date
+        ),
+        None => "(open \u{2014} be the first!)".to_string(),
+    };
+    format!(
+        "     {} {}\n          {}",
+        medal.emoji(),
+        medal.label(),
+        detail,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,5 +197,26 @@ mod tests {
     fn inline_hint_contains_trophy() {
         let hint = inline_hint();
         assert!(hint.contains("new highscore!"));
+    }
+
+    #[test]
+    fn render_board_slot_populated_contains_size_and_date() {
+        let record = Record {
+            size: 1_073_741_824, // 1 GiB
+            date: "2026-03-15".to_string(),
+        };
+        let out = render_board_slot(Medal::Gold, Some(&record));
+        assert!(out.contains("Gold"));
+        assert!(out.contains("1.0GiB"));
+        assert!(out.contains("2026-03-15"));
+        assert!(!out.contains("open"));
+    }
+
+    #[test]
+    fn render_board_slot_open_contains_marker() {
+        let out = render_board_slot(Medal::Silver, None);
+        assert!(out.contains("Silver"));
+        assert!(out.contains("open"));
+        assert!(out.contains("be the first"));
     }
 }
