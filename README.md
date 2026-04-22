@@ -73,7 +73,7 @@ $HOME/.cargo/bin/putzen
 ```sh
 $ putzen --help
 
-Usage: putzen <folder> [-v] [-d] [-y] [-L] [-a]
+Usage: putzen [-v] [--scores] [-d] [-y] [-L] [-a] [--] [<folder>]
 
 help keeping your disk clean of build and dependency artifacts
 
@@ -82,12 +82,13 @@ Positional Arguments:
 
 Options:
   -v, --version     show the version number
+  --scores          show the stored highscore board and exit
   -d, --dry-run     dry-run will never delete anything, good for simulations
   -y, --yes-to-all  switch to say yes to all questions
   -L, --follow      follow symbolic links
   -a, --dive-into-hidden-folders
                     dive into hidden folders too, e.g. `.git`
-  --help            display usage information
+  --help, help      display usage information
 ```
 
 ## Alternative Projects
