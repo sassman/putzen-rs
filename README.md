@@ -91,6 +91,36 @@ Options:
   --help, help      display usage information
 ```
 
+### Highscores
+
+Every putzen run earns you a little reward. The biggest single cleanup and the biggest total run ever measured are kept as a tiny gold/silver/bronze podium. Keep running it on your machine and watch your records stack up over time — show the board any time with `--scores`:
+
+```
+❯ putzen --scores
+
+   ──── ★ SINGLE CLEANUP ★ ────
+     🥇 Gold
+         40.1GiB · 2026-03-14
+   ────────────────────────────
+     🥈 Silver
+         37.9GiB · 2026-03-10
+   ────────────────────────────
+     🥉 Bronze
+          6.5GiB · 2026-03-14
+   ────────────────────────────
+
+   ──── ★    TOTAL RUN   ★ ────
+     🥇 Gold
+         60.3GiB · 2026-03-14
+   ────────────────────────────
+     🥈 Silver
+         44.6GiB · 2026-03-10
+   ────────────────────────────
+     🥉 Bronze
+         19.6GiB · 2026-04-03
+   ────────────────────────────
+```
+
 ## Alternative Projects
 
 - [kondo](https://github.com/tbillington/kondo)
