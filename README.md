@@ -6,7 +6,6 @@
 [![crates.io](https://img.shields.io/crates/v/putzen-cli.svg)](https://crates.io/crates/putzen-cli)
 [![dependency status](https://deps.rs/repo/github/sassman/putzen-rs/status.svg)](https://deps.rs/repo/github/sassman/putzen-rs)
 [![Build Status](https://github.com/sassman/putzen-rs/workflows/Build/badge.svg)](https://github.com/sassman/putzen-rs/actions?query=branch%3Amain+workflow%3ABuild+)
-[![LOC](https://tokei.rs/b1/github/sassman/putzen-rs?category=code)](https://tokei.rs/b1/github/sassman/putzen-rs?category=code)
 
 "putzen" is German and means cleaning. It helps keeping your disk clean of build and dependency artifacts safely.
 
@@ -73,7 +72,7 @@ $HOME/.cargo/bin/putzen
 ```sh
 $ putzen --help
 
-Usage: putzen <folder> [-v] [-d] [-y] [-L] [-a]
+Usage: putzen [-v] [--scores] [-d] [-y] [-L] [-a] [--] [<folder>]
 
 help keeping your disk clean of build and dependency artifacts
 
@@ -82,12 +81,43 @@ Positional Arguments:
 
 Options:
   -v, --version     show the version number
+  --scores          show the stored highscore board and exit
   -d, --dry-run     dry-run will never delete anything, good for simulations
   -y, --yes-to-all  switch to say yes to all questions
   -L, --follow      follow symbolic links
   -a, --dive-into-hidden-folders
                     dive into hidden folders too, e.g. `.git`
-  --help            display usage information
+  --help, help      display usage information
+```
+
+### Highscores
+
+Every putzen run earns you a little reward. The biggest single cleanup and the biggest total run ever measured are kept as a tiny gold/silver/bronze podium. Keep running it on your machine and watch your records stack up over time — show the board any time with `--scores`:
+
+```
+❯ putzen --scores
+
+   ──── ★ SINGLE CLEANUP ★ ────
+     🥇 Gold
+         40.1GiB · 2026-03-14
+   ────────────────────────────
+     🥈 Silver
+         37.9GiB · 2026-03-10
+   ────────────────────────────
+     🥉 Bronze
+          6.5GiB · 2026-03-14
+   ────────────────────────────
+
+   ──── ★    TOTAL RUN   ★ ────
+     🥇 Gold
+         60.3GiB · 2026-03-14
+   ────────────────────────────
+     🥈 Silver
+         44.6GiB · 2026-03-10
+   ────────────────────────────
+     🥉 Bronze
+         19.6GiB · 2026-04-03
+   ────────────────────────────
 ```
 
 ## Alternative Projects

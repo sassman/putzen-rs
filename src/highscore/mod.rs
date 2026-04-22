@@ -1,6 +1,8 @@
 pub mod display;
 pub mod podium;
 
+pub use display::render_board;
+
 use crate::highscore::display::{inline_hint, render_medals, EarnedMedal, TrackName};
 use crate::highscore::podium::{Medal, Podium};
 use crate::observer::RunObserver;
@@ -8,6 +10,17 @@ use crate::observer::RunObserver;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+
+/// Resolve the on-disk path to `highscores.toml` under the user's config dir.
+pub(crate) fn highscores_path() -> std::io::Result<PathBuf> {
+    let config_dir = dirs_lite::config_dir().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "Could not determine config directory",
+        )
+    })?;
+    Ok(config_dir.join("putzen").join("highscores.toml"))
+}
 
 /// Mirror `Podium::place` bumping logic on earned medals for a given track.
 /// When a new medal is placed, existing earned medals shift down one tier
@@ -49,6 +62,26 @@ pub struct Highscores {
     pub total_run: Podium,
 }
 
+impl Highscores {
+    /// Load from the real user config directory.
+    /// Returns `Self::default()` if the file doesn't exist yet.
+    pub fn load() -> std::io::Result<Self> {
+        Self::load_from(highscores_path()?)
+    }
+
+    /// Load from an explicit path (used by tests and by `load`).
+    /// Returns `Self::default()` if the path doesn't exist.
+    pub fn load_from(file_path: PathBuf) -> std::io::Result<Self> {
+        if file_path.exists() {
+            let content = fs::read_to_string(&file_path)?;
+            toml::from_str(&content)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+        } else {
+            Ok(Self::default())
+        }
+    }
+}
+
 pub struct HighscoreObserver {
     highscores: Highscores,
     earned_medals: Vec<EarnedMedal>,
@@ -58,7 +91,7 @@ pub struct HighscoreObserver {
 impl HighscoreObserver {
     /// Load highscores from disk or create a new empty set.
     pub fn load() -> std::io::Result<Self> {
-        let file_path = Self::highscores_path()?;
+        let file_path = highscores_path()?;
         let (highscores, is_first_run) = if file_path.exists() {
             let content = fs::read_to_string(&file_path)?;
             let highscores: Highscores = toml::from_str(&content)
@@ -94,16 +127,6 @@ impl HighscoreObserver {
             earned_medals: Vec::new(),
             file_path,
         })
-    }
-
-    fn highscores_path() -> std::io::Result<PathBuf> {
-        let config_dir = dirs_lite::config_dir().ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "Could not determine config directory",
-            )
-        })?;
-        Ok(config_dir.join("putzen").join("highscores.toml"))
     }
 
     fn today() -> String {
@@ -254,5 +277,42 @@ mod tests {
         observer.on_folder_cleaned(1000);
         observer.on_run_complete(1000);
         assert!(path.exists());
+    }
+
+    #[test]
+    fn highscores_load_from_returns_default_when_file_missing() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("does_not_exist.toml");
+        let highscores = Highscores::load_from(path).unwrap();
+        assert!(highscores.single_cleanup.gold.is_none());
+        assert!(highscores.total_run.gold.is_none());
+    }
+
+    #[test]
+    fn highscores_load_from_parses_existing_file() {
+        // Write a file via the observer so we know the format is correct.
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("highscores.toml");
+        {
+            let mut observer = HighscoreObserver::load_from(path.clone()).unwrap();
+            observer.on_folder_cleaned(42_000);
+            observer.on_run_complete(42_000);
+        }
+
+        let highscores = Highscores::load_from(path).unwrap();
+        assert_eq!(
+            highscores.single_cleanup.gold.as_ref().unwrap().size,
+            42_000
+        );
+        assert_eq!(highscores.total_run.gold.as_ref().unwrap().size, 42_000);
+    }
+
+    #[test]
+    fn highscores_load_from_rejects_malformed_toml() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("highscores.toml");
+        fs::write(&path, "this is not toml = = {").unwrap();
+        let err = Highscores::load_from(path).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
     }
 }

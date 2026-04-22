@@ -28,6 +28,11 @@ struct PutzenCliArgs {
     #[argh(switch, short = 'v')]
     version: bool,
 
+    /// show the stored highscore board and exit
+    #[cfg(feature = "highscore-board")]
+    #[argh(switch)]
+    scores: bool,
+
     /// dry-run will never delete anything, good for simulations
     #[argh(switch, short = 'd')]
     dry_run: bool,
@@ -53,10 +58,15 @@ fn main() -> Result<()> {
     let args: PutzenCliArgs = argh::from_env();
     if args.version {
         println!("{} {}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
-        Ok(())
-    } else {
-        visit_path(&args)
+        return Ok(());
     }
+    #[cfg(feature = "highscore-board")]
+    if args.scores {
+        let highscores = putzen_cli::Highscores::load()?;
+        println!("{}", putzen_cli::render_board(&highscores));
+        return Ok(());
+    }
+    visit_path(&args)
 }
 
 fn visit_path(args: &PutzenCliArgs) -> Result<()> {
@@ -181,6 +191,8 @@ mod tests {
 
         let args = PutzenCliArgs {
             version: false,
+            #[cfg(feature = "highscore-board")]
+            scores: false,
             dry_run: false,
             yes_to_all: true,
             follow: false,
