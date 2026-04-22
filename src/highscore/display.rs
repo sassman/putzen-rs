@@ -51,15 +51,30 @@ impl Medal {
     }
 }
 
+/// Banner header line, e.g. `   ──── ★ NEW HIGHSCORE ★ ────`.
+fn banner_header(title: &str) -> String {
+    format!(
+        "   \u{2500}\u{2500}\u{2500}\u{2500} \u{2605} {} \u{2605} \u{2500}\u{2500}\u{2500}\u{2500}",
+        title
+    )
+}
+
+/// Horizontal rule used as the bottom of a banner / separator between slots.
+fn banner_rule() -> &'static str {
+    "   \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}"
+}
+
 /// Render a single medal banner.
 fn render_medal(earned: &EarnedMedal) -> String {
     let size = (earned.size as usize).as_human_readable();
     format!(
-        "\n   \u{2500}\u{2500}\u{2500}\u{2500} \u{2605} NEW HIGHSCORE \u{2605} \u{2500}\u{2500}\u{2500}\u{2500}\n     {} {} \u{00B7} {}\n          {}\n   \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}",
+        "\n{}\n     {} {} \u{00B7} {}\n          {}\n{}",
+        banner_header("NEW HIGHSCORE"),
         earned.medal.emoji(),
         earned.medal.label(),
         earned.track,
         size,
+        banner_rule(),
     )
 }
 
