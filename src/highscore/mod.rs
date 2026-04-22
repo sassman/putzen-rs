@@ -9,6 +9,17 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
+/// Resolve the on-disk path to `highscores.toml` under the user's config dir.
+pub(crate) fn highscores_path() -> std::io::Result<PathBuf> {
+    let config_dir = dirs_lite::config_dir().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "Could not determine config directory",
+        )
+    })?;
+    Ok(config_dir.join("putzen").join("highscores.toml"))
+}
+
 /// Mirror `Podium::place` bumping logic on earned medals for a given track.
 /// When a new medal is placed, existing earned medals shift down one tier
 /// and any that fall off the podium are removed.
@@ -58,7 +69,7 @@ pub struct HighscoreObserver {
 impl HighscoreObserver {
     /// Load highscores from disk or create a new empty set.
     pub fn load() -> std::io::Result<Self> {
-        let file_path = Self::highscores_path()?;
+        let file_path = highscores_path()?;
         let (highscores, is_first_run) = if file_path.exists() {
             let content = fs::read_to_string(&file_path)?;
             let highscores: Highscores = toml::from_str(&content)
@@ -94,16 +105,6 @@ impl HighscoreObserver {
             earned_medals: Vec::new(),
             file_path,
         })
-    }
-
-    fn highscores_path() -> std::io::Result<PathBuf> {
-        let config_dir = dirs_lite::config_dir().ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "Could not determine config directory",
-            )
-        })?;
-        Ok(config_dir.join("putzen").join("highscores.toml"))
     }
 
     fn today() -> String {
