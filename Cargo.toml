@@ -18,6 +18,7 @@ highscore-board = ["dep:toml", "dep:dirs-lite", "dep:jiff", "dep:serde"]
 argh = "0.1"
 dialoguer = "0.12"
 jwalk = "0.8"
+globset = "0.4"
 serde = { version = "1", optional = true, features = ["derive"] }
 toml = { version = "1.1", optional = true }
 dirs-lite = { version = "1", optional = true, default-features = false, features = ["favor-xdg-style"] }
