@@ -3,6 +3,7 @@ use std::io::Result;
 use std::path::PathBuf;
 
 use argh::FromArgs;
+use globset::Glob;
 use jwalk::Parallelism;
 
 use putzen_cli::{
@@ -13,6 +14,12 @@ use putzen_cli::{
 
 #[cfg(feature = "highscore-board")]
 use putzen_cli::HighscoreObserver;
+
+/// Parse a single glob pattern. Returns a stringified error including the
+/// offending input so CLI users see what they typed.
+fn parse_glob(s: &str) -> std::result::Result<Glob, String> {
+    Glob::new(s).map_err(|e| format!("invalid glob `{s}`: {e}"))
+}
 
 /// all supported this to clean up
 static FOLDER_TO_CLEANUP: [FileToFolderMatch; 3] = [
@@ -209,5 +216,30 @@ mod tests {
         assert!(root_folder.path().join("Cargo.toml").exists());
         assert!(root_folder.path().join("package.json").exists());
         assert!(second_node_root_folder.join("package.json").exists());
+    }
+
+    #[test]
+    fn parse_glob_accepts_valid_pattern_with_dot() {
+        let g = parse_glob(".worktrees").expect("should parse");
+        assert_eq!(g.glob(), ".worktrees");
+    }
+
+    #[test]
+    fn parse_glob_accepts_brace_expansion() {
+        let g = parse_glob(".{worktrees,jj}").expect("should parse");
+        assert_eq!(g.glob(), ".{worktrees,jj}");
+    }
+
+    #[test]
+    fn parse_glob_accepts_wildcard() {
+        parse_glob("*").expect("should parse wildcard");
+        parse_glob(".work*").expect("should parse prefix wildcard");
+    }
+
+    #[test]
+    fn parse_glob_rejects_invalid_pattern() {
+        let err = parse_glob("[unterminated").expect_err("should fail");
+        // error message includes the offending input so users can self-diagnose
+        assert!(err.contains("[unterminated"), "got: {err}");
     }
 }
