@@ -1,9 +1,10 @@
 use std::convert::TryFrom;
+use std::ffi::OsStr;
 use std::io::Result;
 use std::path::PathBuf;
 
 use argh::FromArgs;
-use globset::Glob;
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use jwalk::Parallelism;
 
 use putzen_cli::{
@@ -19,6 +20,33 @@ use putzen_cli::HighscoreObserver;
 /// offending input so CLI users see what they typed.
 fn parse_glob(s: &str) -> std::result::Result<Glob, String> {
     Glob::new(s).map_err(|e| format!("invalid glob `{s}`: {e}"))
+}
+
+/// Decides whether a hidden directory (basename starts with `.`) is allowed
+/// to be entered by the walker. Built once per run from CLI args.
+struct HiddenPolicy {
+    no_hidden: bool,
+    matcher: GlobSet,
+}
+
+impl HiddenPolicy {
+    fn new(no_hidden: bool, globs: &[Glob]) -> std::result::Result<Self, String> {
+        let mut b = GlobSetBuilder::new();
+        for g in globs {
+            b.add(g.clone());
+        }
+        let matcher = b.build().map_err(|e| format!("failed to build glob set: {e}"))?;
+        Ok(Self { no_hidden, matcher })
+    }
+
+    /// Should the walker enter this hidden basename?
+    /// Caller is responsible for only passing hidden names (starting with `.`).
+    fn allows_hidden(&self, name: &OsStr) -> bool {
+        if self.no_hidden {
+            return false;
+        }
+        self.matcher.is_match(name)
+    }
 }
 
 /// all supported this to clean up
@@ -241,5 +269,50 @@ mod tests {
         let err = parse_glob("[unterminated").expect_err("should fail");
         // error message includes the offending input so users can self-diagnose
         assert!(err.contains("[unterminated"), "got: {err}");
+    }
+
+    fn policy(globs: &[&str]) -> HiddenPolicy {
+        let compiled: Vec<Glob> = globs.iter().map(|g| parse_glob(g).unwrap()).collect();
+        HiddenPolicy::new(false, &compiled).unwrap()
+    }
+
+    #[test]
+    fn policy_default_worktrees_only() {
+        let p = policy(&[".worktrees"]);
+        assert!(p.allows_hidden(".worktrees".as_ref()));
+        assert!(!p.allows_hidden(".git".as_ref()));
+        assert!(!p.allows_hidden(".cache".as_ref()));
+    }
+
+    #[test]
+    fn policy_brace_expansion_two_dirs() {
+        let p = policy(&[".{worktrees,jj}"]);
+        assert!(p.allows_hidden(".worktrees".as_ref()));
+        assert!(p.allows_hidden(".jj".as_ref()));
+        assert!(!p.allows_hidden(".pijul".as_ref()));
+    }
+
+    #[test]
+    fn policy_star_matches_all_hidden() {
+        let p = policy(&["*"]);
+        assert!(p.allows_hidden(".worktrees".as_ref()));
+        assert!(p.allows_hidden(".git".as_ref()));
+        assert!(p.allows_hidden(".cache".as_ref()));
+    }
+
+    #[test]
+    fn policy_pattern_without_dot_matches_nothing_hidden() {
+        // documented footgun: pattern omits the leading dot, so it can
+        // never match a hidden basename (which always starts with `.`)
+        let p = policy(&["worktrees"]);
+        assert!(!p.allows_hidden(".worktrees".as_ref()));
+    }
+
+    #[test]
+    fn policy_no_hidden_rejects_everything() {
+        let compiled: Vec<Glob> = vec![parse_glob(".worktrees").unwrap()];
+        let p = HiddenPolicy::new(true, &compiled).unwrap();
+        assert!(!p.allows_hidden(".worktrees".as_ref()));
+        assert!(!p.allows_hidden(".anything".as_ref()));
     }
 }
