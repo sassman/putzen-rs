@@ -184,12 +184,34 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
         Box::new(NoOpObserver)
     };
 
+    let hidden_policy = match HiddenPolicy::from_args(args) {
+        Ok(p) => p,
+        Err(msg) => {
+            eprintln!("error: {msg}");
+            std::process::exit(2);
+        }
+    };
+
     ctx.println(format!("Start cleaning at {}", folder.display()));
     for folder in jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(folder)
-        .skip_hidden(!args.dive_into_hidden_folders)
+        .skip_hidden(false)
         .follow_links(args.follow)
         .parallelism(Parallelism::RayonNewPool(8))
-        .process_read_dir(move |_, _, _, children| {
+        .process_read_dir(move |depth, _, _, children| {
+            // 1. drop hidden children disallowed by the policy.
+            // depth=None is the virtual root call (parent of the starting dir);
+            // we must NOT filter those children or we'd block the starting dir itself.
+            if depth.is_some() {
+                children.retain(|dir_entry_result| {
+                    let Ok(dir) = dir_entry_result else { return true; };
+                    let name = dir.file_name();
+                    let is_hidden = name.to_str().map(|s| s.starts_with('.')).unwrap_or(false);
+                    if !is_hidden { return true; }
+                    hidden_policy.allows_hidden(name)
+                });
+            }
+
+            // 2. keep only directories
             children.retain(|dir_entry_result| {
                 dir_entry_result
                     .as_ref()
@@ -197,6 +219,7 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
                     .unwrap_or(false)
             });
 
+            // 3. existing build-artefact marking
             children.iter_mut().for_each(|child| {
                 if let Ok(child) = child {
                     if let Ok(folder) = Folder::try_from(child.path()) {
@@ -469,5 +492,66 @@ mod tests {
         };
         assert!(err.contains("-a"), "got: {err}");
         assert!(err.contains("--include-hidden"), "got: {err}");
+    }
+
+    #[test]
+    fn default_run_descends_into_dot_worktrees_but_not_dot_git() {
+        let root = tempfile::TempDir::new().unwrap();
+
+        // .worktrees/wt1/target  — should be cleaned by default
+        let wt_target = root.path().join(".worktrees").join("wt1").join("target");
+        std::fs::create_dir_all(&wt_target).unwrap();
+        std::fs::File::create(root.path().join(".worktrees").join("wt1").join("Cargo.toml")).unwrap();
+        std::fs::File::create(wt_target.join("artefact")).unwrap();
+
+        // .git/target  — should NOT be touched (hidden, not in default include set)
+        let git_target = root.path().join(".git").join("target");
+        std::fs::create_dir_all(&git_target).unwrap();
+        std::fs::File::create(root.path().join(".git").join("Cargo.toml")).unwrap();
+        std::fs::File::create(git_target.join("artefact")).unwrap();
+
+        let args = PutzenCliArgs {
+            version: false,
+            #[cfg(feature = "highscore-board")]
+            scores: false,
+            dry_run: false,
+            yes_to_all: true,
+            follow: false,
+            dive_into_hidden_folders: false,
+            no_hidden: false,
+            include_hidden: Vec::new(),
+            folder: root.path().to_path_buf(),
+        };
+
+        visit_path(&args).unwrap();
+
+        assert!(!wt_target.exists(), ".worktrees/wt1/target should have been cleaned");
+        assert!(git_target.exists(), ".git/target must NOT be touched");
+    }
+
+    #[test]
+    fn no_hidden_skips_dot_worktrees() {
+        let root = tempfile::TempDir::new().unwrap();
+        let wt_target = root.path().join(".worktrees").join("wt1").join("target");
+        std::fs::create_dir_all(&wt_target).unwrap();
+        std::fs::File::create(root.path().join(".worktrees").join("wt1").join("Cargo.toml")).unwrap();
+        std::fs::File::create(wt_target.join("artefact")).unwrap();
+
+        let args = PutzenCliArgs {
+            version: false,
+            #[cfg(feature = "highscore-board")]
+            scores: false,
+            dry_run: false,
+            yes_to_all: true,
+            follow: false,
+            dive_into_hidden_folders: false,
+            no_hidden: true,
+            include_hidden: Vec::new(),
+            folder: root.path().to_path_buf(),
+        };
+
+        visit_path(&args).unwrap();
+
+        assert!(wt_target.exists(), "--no-hidden must leave .worktrees/wt1/target untouched");
     }
 }
