@@ -74,7 +74,7 @@ $ putzen --help
 
 Usage: putzen [-v] [--scores] [-d] [-y] [-L] [-a] [--no-hidden] [--include-hidden <include-hidden...>] [--] [<folder>]
 
-help keeping your disk clean of build and dependency artifacts Hidden directories are normally skipped, except for `.worktrees/` (so colocated git worktrees are cleaned alongside the main checkout). Use `--include-hidden <GLOB>` to override the list, `--no-hidden` to turn it off entirely, or `-a` to descend into every hidden dir. Examples:     putzen                                       # descends into `.worktrees` by default     putzen --include-hidden '.{worktrees,jj}'   # one glob, two hidden dirs     putzen --include-hidden '.work*'             # any hidden dir starting with `.work`     putzen -a                                    # every hidden dir (== '*')     putzen --no-hidden                           # skip all hidden dirs (legacy)
+help keeping your disk clean of build and dependency artifacts
 
 Positional Arguments:
   folder            path where to start with disk clean up.
@@ -98,7 +98,7 @@ Options:
 
 ### Hidden directories
 
-`putzen` skips hidden directories by default, **except for `.worktrees/`** —
+`putzen` skips hidden directories by default, **except for `.worktrees`** —
 projects that colocate git worktrees inside the repo get cleaned in one run.
 
 - `--include-hidden <GLOB>` — pick which hidden dirs to descend into (repeatable). Default: `.worktrees`. Glob is matched against the full basename including the leading dot, so write `.worktrees`, `.{worktrees,jj}`, `.work*`.

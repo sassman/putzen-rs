@@ -96,7 +96,7 @@ static FOLDER_TO_CLEANUP: [FileToFolderMatch; 3] = [
 #[derive(FromArgs)]
 /// help keeping your disk clean of build and dependency artifacts
 ///
-/// Hidden directories are normally skipped, except for `.worktrees/`
+/// Hidden directories are normally skipped, except for `.worktrees`
 /// (so colocated git worktrees are cleaned alongside the main checkout).
 /// Use `--include-hidden <GLOB>` to override the list, `--no-hidden` to
 /// turn it off entirely, or `-a` to descend into every hidden dir.
