@@ -47,6 +47,43 @@ impl HiddenPolicy {
         }
         self.matcher.is_match(name)
     }
+
+    /// Build a policy from parsed CLI args. Enforces the mutual-exclusion
+    /// rules and applies the default `.worktrees` pattern when no
+    /// `--include-hidden` and no `-a` was passed.
+    fn from_args(args: &PutzenCliArgs) -> std::result::Result<Self, String> {
+        let dash_a = args.dive_into_hidden_folders;
+        let no_hidden = args.no_hidden;
+        let include_given = !args.include_hidden.is_empty();
+
+        if no_hidden && include_given {
+            return Err("`--no-hidden` and `--include-hidden` are mutually exclusive".into());
+        }
+        if no_hidden && dash_a {
+            return Err("`--no-hidden` and `-a` are mutually exclusive".into());
+        }
+        if dash_a && include_given {
+            return Err("`-a` and `--include-hidden` are mutually exclusive".into());
+        }
+
+        if no_hidden {
+            return Self::new(true, &[]);
+        }
+
+        // Resolve the active set of globs:
+        //   -a            -> ["*"]
+        //   --include-... -> user list
+        //   neither       -> [".worktrees"]
+        let owned: Vec<Glob> = if dash_a {
+            vec![parse_glob("*").expect("`*` is a valid glob")]
+        } else if include_given {
+            args.include_hidden.clone()
+        } else {
+            vec![parse_glob(".worktrees").expect("`.worktrees` is a valid glob")]
+        };
+
+        Self::new(false, &owned)
+    }
 }
 
 /// all supported this to clean up
@@ -80,9 +117,19 @@ struct PutzenCliArgs {
     #[argh(switch, short = 'L')]
     follow: bool,
 
-    /// dive into hidden folders too, e.g. `.git`
+    /// include every hidden directory (== --include-hidden '*')
     #[argh(switch, short = 'a')]
     dive_into_hidden_folders: bool,
+
+    /// skip every hidden directory (overrides the default `.worktrees`)
+    #[argh(switch)]
+    no_hidden: bool,
+
+    /// glob of hidden directories to descend into (repeatable). Match is
+    /// against the full basename including the leading dot, e.g.
+    /// `.worktrees`, `.{worktrees,jj}`, `.work*`. Default: `.worktrees`.
+    #[argh(option, from_str_fn(parse_glob))]
+    include_hidden: Vec<Glob>,
 
     /// path where to start with disk clean up.
     #[argh(positional, default = "PathBuf::from(\".\")")]
@@ -232,6 +279,8 @@ mod tests {
             yes_to_all: true,
             follow: false,
             dive_into_hidden_folders: false,
+            no_hidden: false,
+            include_hidden: Vec::new(),
             folder: root_folder.path().to_path_buf(),
         };
 
@@ -314,5 +363,111 @@ mod tests {
         let p = HiddenPolicy::new(true, &compiled).unwrap();
         assert!(!p.allows_hidden(".worktrees".as_ref()));
         assert!(!p.allows_hidden(".anything".as_ref()));
+    }
+
+    fn args_from(input: &[&str]) -> std::result::Result<PutzenCliArgs, argh::EarlyExit> {
+        PutzenCliArgs::from_args(&["putzen"], input)
+    }
+
+    #[test]
+    fn from_args_default_includes_worktrees_only() {
+        let args = args_from(&[]).unwrap();
+        let policy = HiddenPolicy::from_args(&args).unwrap();
+        assert!(policy.allows_hidden(".worktrees".as_ref()));
+        assert!(!policy.allows_hidden(".git".as_ref()));
+    }
+
+    #[test]
+    fn from_args_dash_a_includes_everything_hidden() {
+        let args = args_from(&["-a"]).unwrap();
+        let policy = HiddenPolicy::from_args(&args).unwrap();
+        assert!(policy.allows_hidden(".worktrees".as_ref()));
+        assert!(policy.allows_hidden(".git".as_ref()));
+        assert!(policy.allows_hidden(".whatever".as_ref()));
+    }
+
+    #[test]
+    fn from_args_no_hidden_rejects_everything() {
+        let args = args_from(&["--no-hidden"]).unwrap();
+        let policy = HiddenPolicy::from_args(&args).unwrap();
+        assert!(!policy.allows_hidden(".worktrees".as_ref()));
+        assert!(!policy.allows_hidden(".anything".as_ref()));
+    }
+
+    #[test]
+    fn from_args_include_hidden_overrides_default() {
+        let args = args_from(&["--include-hidden", ".git"]).unwrap();
+        let policy = HiddenPolicy::from_args(&args).unwrap();
+        assert!(policy.allows_hidden(".git".as_ref()));
+        // default `.worktrees` is replaced, not merged
+        assert!(!policy.allows_hidden(".worktrees".as_ref()));
+    }
+
+    #[test]
+    fn from_args_include_hidden_repeatable() {
+        let args = args_from(&[
+            "--include-hidden", ".git",
+            "--include-hidden", ".cache",
+        ]).unwrap();
+        let policy = HiddenPolicy::from_args(&args).unwrap();
+        assert!(policy.allows_hidden(".git".as_ref()));
+        assert!(policy.allows_hidden(".cache".as_ref()));
+        assert!(!policy.allows_hidden(".worktrees".as_ref()));
+    }
+
+    #[test]
+    fn from_args_brace_expansion_one_flag_two_dirs() {
+        let args = args_from(&["--include-hidden", ".{worktrees,jj}"]).unwrap();
+        let policy = HiddenPolicy::from_args(&args).unwrap();
+        assert!(policy.allows_hidden(".worktrees".as_ref()));
+        assert!(policy.allows_hidden(".jj".as_ref()));
+    }
+
+    #[test]
+    fn from_args_invalid_glob_errors_at_parse_time() {
+        // argh's from_str_fn surfaces the error at argument-parse time
+        let result = args_from(&["--include-hidden", "[bad"]);
+        let early_exit = match result {
+            Err(e) => e,
+            Ok(_) => panic!("expected parse error for invalid glob"),
+        };
+        let msg = format!("{early_exit:?}");
+        assert!(msg.contains("[bad"), "error should mention offending input: {msg}");
+    }
+
+    #[test]
+    fn from_args_no_hidden_conflicts_with_include_hidden() {
+        let args = args_from(&["--no-hidden", "--include-hidden", ".git"]).unwrap();
+        let result = HiddenPolicy::from_args(&args);
+        let err = match result {
+            Err(e) => e,
+            Ok(_) => panic!("expected conflict error"),
+        };
+        assert!(err.contains("--no-hidden"), "got: {err}");
+        assert!(err.contains("--include-hidden"), "got: {err}");
+    }
+
+    #[test]
+    fn from_args_no_hidden_conflicts_with_dash_a() {
+        let args = args_from(&["--no-hidden", "-a"]).unwrap();
+        let result = HiddenPolicy::from_args(&args);
+        let err = match result {
+            Err(e) => e,
+            Ok(_) => panic!("expected conflict error"),
+        };
+        assert!(err.contains("--no-hidden"), "got: {err}");
+        assert!(err.contains("-a"), "got: {err}");
+    }
+
+    #[test]
+    fn from_args_dash_a_conflicts_with_include_hidden() {
+        let args = args_from(&["-a", "--include-hidden", ".git"]).unwrap();
+        let result = HiddenPolicy::from_args(&args);
+        let err = match result {
+            Err(e) => e,
+            Ok(_) => panic!("expected conflict error"),
+        };
+        assert!(err.contains("-a"), "got: {err}");
+        assert!(err.contains("--include-hidden"), "got: {err}");
     }
 }
