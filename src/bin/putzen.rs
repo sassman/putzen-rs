@@ -95,6 +95,18 @@ static FOLDER_TO_CLEANUP: [FileToFolderMatch; 3] = [
 
 #[derive(FromArgs)]
 /// help keeping your disk clean of build and dependency artifacts
+///
+/// Hidden directories are normally skipped, except for `.worktrees/`
+/// (so colocated git worktrees are cleaned alongside the main checkout).
+/// Use `--include-hidden <GLOB>` to override the list, `--no-hidden` to
+/// turn it off entirely, or `-a` to descend into every hidden dir.
+///
+/// Examples:
+///     putzen                                       # descends into `.worktrees` by default
+///     putzen --include-hidden '.{worktrees,jj}'   # one glob, two hidden dirs
+///     putzen --include-hidden '.work*'             # any hidden dir starting with `.work`
+///     putzen -a                                    # every hidden dir (== '*')
+///     putzen --no-hidden                           # skip all hidden dirs (legacy)
 struct PutzenCliArgs {
     /// show the version number
     #[argh(switch, short = 'v')]
