@@ -223,16 +223,22 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
     let hidden_policy = HiddenPolicy::from_args(args)
         .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
 
+    // When --no-hidden is set, let jwalk drop hidden entries natively;
+    // otherwise we keep them all and let `hidden_policy` decide in the closure.
+    let jwalk_skip_hidden = args.no_hidden;
+
     ctx.println(format!("Start cleaning at {}", folder.display()));
     for folder in jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(folder)
-        .skip_hidden(false)
+        .skip_hidden(jwalk_skip_hidden)
         .follow_links(args.follow)
         .parallelism(Parallelism::RayonNewPool(8))
         .process_read_dir(move |depth, _, _, children| {
             // 1. drop hidden children disallowed by the policy.
             // depth=None is the virtual root call (parent of the starting dir);
             // we must NOT filter those children or we'd block the starting dir itself.
-            if depth.is_some() {
+            // When `--no-hidden` is in effect, jwalk's own `skip_hidden(true)`
+            // has already dropped them, so we can skip this pass entirely.
+            if depth.is_some() && !hidden_policy.no_hidden {
                 children.retain(|dir_entry_result| {
                     let Ok(dir) = dir_entry_result else {
                         return true;
