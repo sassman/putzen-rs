@@ -72,7 +72,7 @@ $HOME/.cargo/bin/putzen
 ```sh
 $ putzen --help
 
-Usage: putzen [-v] [--scores] [-d] [-y] [-L] [-a] [--] [<folder>]
+Usage: putzen [-v] [--scores] [-d] [-y] [-L] [-a] [--no-hidden] [--hidden <hidden...>] [--] [<folder>]
 
 help keeping your disk clean of build and dependency artifacts
 
@@ -86,9 +86,26 @@ Options:
   -y, --yes-to-all  switch to say yes to all questions
   -L, --follow      follow symbolic links
   -a, --dive-into-hidden-folders
-                    dive into hidden folders too, e.g. `.git`
+                    include every hidden directory (== --hidden '*')
+  --no-hidden       skip every hidden directory (overrides the default
+                    `.worktrees`)
+  --hidden          glob of hidden directories to descend into (repeatable).
+                    Match is against the full basename including the leading
+                    dot, e.g. `.worktrees`, `.{worktrees,jj}`, `.work*`.
+                    Default: `.worktrees`.
   --help, help      display usage information
 ```
+
+### Hidden directories
+
+`putzen` skips hidden directories by default, **except for `.worktrees`** —
+projects that colocate git worktrees inside the repo get cleaned in one run.
+
+- `--hidden <GLOB>` — pick which hidden dirs to descend into (repeatable). Default: `.worktrees`. Glob is matched against the full basename including the leading dot, so write `.worktrees`, `.{worktrees,jj}`, `.work*`.
+- `--no-hidden` — skip *all* hidden directories (pre-3.x behavior).
+- `-a` / `--dive-into-hidden-folders` — descend into every hidden directory (equivalent to `--hidden '*'`).
+
+These three are mutually exclusive.
 
 ### Highscores
 
