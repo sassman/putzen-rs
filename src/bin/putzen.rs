@@ -16,10 +16,23 @@ use putzen_cli::{
 #[cfg(feature = "highscore-board")]
 use putzen_cli::HighscoreObserver;
 
+/// Static glob pattern used when neither `-a` nor `--include-hidden` is given.
+const DEFAULT_HIDDEN_GLOB: &str = ".worktrees";
+/// Static glob pattern used for `-a` / `--dive-into-hidden-folders`.
+const ALL_HIDDEN_GLOB: &str = "*";
+
 /// Parse a single glob pattern. Returns a stringified error including the
 /// offending input so CLI users see what they typed.
 fn parse_glob(s: &str) -> std::result::Result<Glob, String> {
     Glob::new(s).map_err(|e| format!("invalid glob `{s}`: {e}"))
+}
+
+/// Cheap first-char heuristic: a glob can only match a hidden basename
+/// (which always starts with `.`) if its pattern starts with `.` or with a
+/// metacharacter that could expand to one (`*`, `?`, `[`, `{`). Anything
+/// else — e.g. `worktrees` — is guaranteed to never match.
+fn pattern_can_match_hidden(pattern: &str) -> bool {
+    matches!(pattern.chars().next(), Some('.' | '*' | '?' | '[' | '{'))
 }
 
 /// Decides whether a hidden directory (basename starts with `.`) is allowed
@@ -74,14 +87,23 @@ impl HiddenPolicy {
 
         // Resolve the active set of globs:
         //   -a            -> ["*"]
-        //   --include-... -> user list
+        //   --include-... -> user list (warn on patterns that can't match a hidden name)
         //   neither       -> [".worktrees"]
         let owned: Vec<Glob> = if dash_a {
-            vec![parse_glob("*").expect("`*` is a valid glob")]
+            vec![parse_glob(ALL_HIDDEN_GLOB).expect("static glob must parse")]
         } else if include_given {
+            for g in &args.include_hidden {
+                let pat = g.glob();
+                if !pattern_can_match_hidden(pat) {
+                    eprintln!(
+                        "warning: --include-hidden `{pat}` does not start with `.`, `*`, `?`, `[`, or `{{` \
+                         — hidden basenames always start with `.`, so this pattern will never match"
+                    );
+                }
+            }
             args.include_hidden.clone()
         } else {
-            vec![parse_glob(".worktrees").expect("`.worktrees` is a valid glob")]
+            vec![parse_glob(DEFAULT_HIDDEN_GLOB).expect("static glob must parse")]
         };
 
         Self::new(false, &owned)
@@ -198,13 +220,8 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
         Box::new(NoOpObserver)
     };
 
-    let hidden_policy = match HiddenPolicy::from_args(args) {
-        Ok(p) => p,
-        Err(msg) => {
-            eprintln!("error: {msg}");
-            std::process::exit(2);
-        }
-    };
+    let hidden_policy = HiddenPolicy::from_args(args)
+        .map_err(|msg| std::io::Error::new(std::io::ErrorKind::InvalidInput, msg))?;
 
     ctx.println(format!("Start cleaning at {}", folder.display()));
     for folder in jwalk::WalkDirGeneric::<((), Option<Folder>)>::new(folder)
@@ -221,7 +238,8 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
                         return true;
                     };
                     let name = dir.file_name();
-                    let is_hidden = name.to_str().map(|s| s.starts_with('.')).unwrap_or(false);
+                    // byte-level check: works for non-UTF-8 names too, and `.` is always ASCII
+                    let is_hidden = name.as_encoded_bytes().first() == Some(&b'.');
                     if !is_hidden {
                         return true;
                     }
@@ -352,6 +370,20 @@ mod tests {
     fn parse_glob_accepts_wildcard() {
         parse_glob("*").expect("should parse wildcard");
         parse_glob(".work*").expect("should parse prefix wildcard");
+    }
+
+    #[test]
+    fn pattern_can_match_hidden_heuristic() {
+        assert!(pattern_can_match_hidden(".worktrees"));
+        assert!(pattern_can_match_hidden(".{worktrees,jj}"));
+        assert!(pattern_can_match_hidden(".work*"));
+        assert!(pattern_can_match_hidden("*"));
+        assert!(pattern_can_match_hidden("?orktrees"));
+        assert!(pattern_can_match_hidden("[.a]worktrees"));
+        assert!(pattern_can_match_hidden("{.a,.b}"));
+        // anything not starting with `.` or a metachar cannot match a hidden basename
+        assert!(!pattern_can_match_hidden("worktrees"));
+        assert!(!pattern_can_match_hidden(""));
     }
 
     #[test]
