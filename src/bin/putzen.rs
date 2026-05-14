@@ -35,7 +35,9 @@ impl HiddenPolicy {
         for g in globs {
             b.add(g.clone());
         }
-        let matcher = b.build().map_err(|e| format!("failed to build glob set: {e}"))?;
+        let matcher = b
+            .build()
+            .map_err(|e| format!("failed to build glob set: {e}"))?;
         Ok(Self { no_hidden, matcher })
     }
 
@@ -215,10 +217,14 @@ fn visit_path(args: &PutzenCliArgs) -> Result<()> {
             // we must NOT filter those children or we'd block the starting dir itself.
             if depth.is_some() {
                 children.retain(|dir_entry_result| {
-                    let Ok(dir) = dir_entry_result else { return true; };
+                    let Ok(dir) = dir_entry_result else {
+                        return true;
+                    };
                     let name = dir.file_name();
                     let is_hidden = name.to_str().map(|s| s.starts_with('.')).unwrap_or(false);
-                    if !is_hidden { return true; }
+                    if !is_hidden {
+                        return true;
+                    }
                     hidden_policy.allows_hidden(name)
                 });
             }
@@ -440,10 +446,7 @@ mod tests {
 
     #[test]
     fn from_args_include_hidden_repeatable() {
-        let args = args_from(&[
-            "--include-hidden", ".git",
-            "--include-hidden", ".cache",
-        ]).unwrap();
+        let args = args_from(&["--include-hidden", ".git", "--include-hidden", ".cache"]).unwrap();
         let policy = HiddenPolicy::from_args(&args).unwrap();
         assert!(policy.allows_hidden(".git".as_ref()));
         assert!(policy.allows_hidden(".cache".as_ref()));
@@ -467,7 +470,10 @@ mod tests {
             Ok(_) => panic!("expected parse error for invalid glob"),
         };
         let msg = format!("{early_exit:?}");
-        assert!(msg.contains("[bad"), "error should mention offending input: {msg}");
+        assert!(
+            msg.contains("[bad"),
+            "error should mention offending input: {msg}"
+        );
     }
 
     #[test]
@@ -513,7 +519,13 @@ mod tests {
         // .worktrees/wt1/target  — should be cleaned by default
         let wt_target = root.path().join(".worktrees").join("wt1").join("target");
         std::fs::create_dir_all(&wt_target).unwrap();
-        std::fs::File::create(root.path().join(".worktrees").join("wt1").join("Cargo.toml")).unwrap();
+        std::fs::File::create(
+            root.path()
+                .join(".worktrees")
+                .join("wt1")
+                .join("Cargo.toml"),
+        )
+        .unwrap();
         std::fs::File::create(wt_target.join("artefact")).unwrap();
 
         // .git/target  — should NOT be touched (hidden, not in default include set)
@@ -537,7 +549,10 @@ mod tests {
 
         visit_path(&args).unwrap();
 
-        assert!(!wt_target.exists(), ".worktrees/wt1/target should have been cleaned");
+        assert!(
+            !wt_target.exists(),
+            ".worktrees/wt1/target should have been cleaned"
+        );
         assert!(git_target.exists(), ".git/target must NOT be touched");
     }
 
@@ -546,7 +561,13 @@ mod tests {
         let root = tempfile::TempDir::new().unwrap();
         let wt_target = root.path().join(".worktrees").join("wt1").join("target");
         std::fs::create_dir_all(&wt_target).unwrap();
-        std::fs::File::create(root.path().join(".worktrees").join("wt1").join("Cargo.toml")).unwrap();
+        std::fs::File::create(
+            root.path()
+                .join(".worktrees")
+                .join("wt1")
+                .join("Cargo.toml"),
+        )
+        .unwrap();
         std::fs::File::create(wt_target.join("artefact")).unwrap();
 
         let args = PutzenCliArgs {
@@ -564,6 +585,9 @@ mod tests {
 
         visit_path(&args).unwrap();
 
-        assert!(wt_target.exists(), "--no-hidden must leave .worktrees/wt1/target untouched");
+        assert!(
+            wt_target.exists(),
+            "--no-hidden must leave .worktrees/wt1/target untouched"
+        );
     }
 }
