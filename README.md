@@ -183,6 +183,8 @@ score = size_MiB × age_days
 
 The intuition: a 5 GiB cache you used yesterday is probably still useful; a 200 MiB cache untouched for a year is dead weight, and the score keeps it visible. The right-pane heatmap bar is `score / max_score` — the heaviest cache in your visible set is full-red, everything else scales down through orange to green.
 
+Score is the default sort order. Press `s` to cycle through **score → size → age** when you want to rank by a single dimension instead.
+
 The `--floor <duration>` flag (e.g. `--floor 14d`) marks caches younger than that threshold as **ACTIVE** — marking them for deletion needs an extra confirmation modal so a fresh cache you're still using doesn't disappear by accident. Default floor: 7 days.
 
 ## Alternative Projects
