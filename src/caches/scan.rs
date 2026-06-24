@@ -12,6 +12,13 @@ const TOP_K: usize = 64;
 /// Walk a single directory and aggregate its size, newest mtime, and counts.
 /// Symlinks are not followed. Permission errors are silenced.
 pub fn stat_dir(root: &Path) -> Cache {
+    stat_dir_with_progress(root, &mut || {})
+}
+
+/// Same as `stat_dir` but invokes `on_dir` once per directory entry observed
+/// during the walk. The callback is the per-cache progress hook used by the
+/// startup scan to feed `Msg::ScanProgress` to the TUI.
+pub fn stat_dir_with_progress(root: &Path, on_dir: &mut dyn FnMut()) -> Cache {
     let mut size_bytes = 0u64;
     let mut newest = None::<SystemTime>;
     let mut file_count = 0u64;
@@ -38,6 +45,7 @@ pub fn stat_dir(root: &Path) -> Cache {
         };
         if meta.is_dir() {
             dir_count += 1;
+            on_dir();
             continue;
         }
         if !meta.is_file() {
@@ -59,14 +67,22 @@ pub fn stat_dir(root: &Path) -> Cache {
     // dir_count includes `root` itself; subtract.
     let dir_count = dir_count.saturating_sub(1);
 
+    // Preserve the literal directory name, dotfiles included.  Stripping the
+    // leading '.' looked tidier for the well-known built-in seeds (`.cargo`
+    // → `cargo`) but is misleading for user-supplied `--root` paths and any
+    // hidden folder that just happens to land in the rank table.
     let label = root
         .file_name()
-        .map(|s| s.to_string_lossy().trim_start_matches('.').to_string())
+        .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_default();
 
     let mut top_files: Vec<TopFile> = heap
         .into_iter()
-        .map(|Reverse((size, name, mtime))| TopFile { name, size_bytes: size, mtime })
+        .map(|Reverse((size, name, mtime))| TopFile {
+            name,
+            size_bytes: size,
+            mtime,
+        })
         .collect();
     top_files.sort_by_key(|f| Reverse(f.size_bytes));
 
@@ -85,21 +101,47 @@ pub fn stat_dir(root: &Path) -> Cache {
 /// Enumerate immediate children of `seed`; each becomes one `Cache`.
 /// Non-existent or non-directory seeds yield an empty vec.
 pub fn enumerate_seed(seed: &Path) -> Vec<Cache> {
-    let Ok(read) = std::fs::read_dir(seed) else { return Vec::new() };
+    enumerate_seed_with_progress(seed, &mut || {})
+}
+
+/// Same as `enumerate_seed` but invokes `on_dir` once per directory entry
+/// observed during each child cache's walk.  Drill-in workers use this to
+/// feed `Msg::ScanProgress` to the TUI so the spinner counts folders the
+/// same way the startup scan does.
+pub fn enumerate_seed_with_progress(seed: &Path, on_dir: &mut dyn FnMut()) -> Vec<Cache> {
+    let Ok(read) = std::fs::read_dir(seed) else {
+        return Vec::new();
+    };
     read.flatten()
         .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
-        .map(|e| stat_dir(&e.path()))
+        .map(|e| stat_dir_with_progress(&e.path(), on_dir))
         .collect()
 }
 
 /// Walk every seed and concatenate, de-duplicating by canonicalised absolute
 /// path. Order is preserved (first occurrence wins).
 pub fn collect(seeds: &[PathBuf]) -> Vec<Cache> {
+    collect_with_progress(seeds, &mut || {})
+}
+
+/// Same as `collect` but invokes `on_dir` once per directory entry observed
+/// during every cache's walk. The startup-scan worker uses this to send
+/// `Msg::ScanProgress` updates to the TUI.
+pub fn collect_with_progress(seeds: &[PathBuf], on_dir: &mut dyn FnMut()) -> Vec<Cache> {
     let mut seen = HashSet::new();
     let mut out = Vec::new();
     for s in seeds {
-        let Ok(canonical) = s.canonicalize() else { continue };
-        for c in enumerate_seed(&canonical) {
+        let Ok(canonical) = s.canonicalize() else {
+            continue;
+        };
+        let Ok(read) = std::fs::read_dir(&canonical) else {
+            continue;
+        };
+        for entry in read.flatten() {
+            if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                continue;
+            }
+            let c = stat_dir_with_progress(&entry.path(), on_dir);
             let canon = c.path.canonicalize().unwrap_or_else(|_| c.path.clone());
             if seen.insert(canon) {
                 out.push(c);
@@ -130,8 +172,14 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let nested = tmp.path().join("a/b");
         fs::create_dir_all(&nested).unwrap();
-        File::create(tmp.path().join("a/one")).unwrap().write_all(&[0u8; 100]).unwrap();
-        File::create(tmp.path().join("a/b/two")).unwrap().write_all(&[0u8; 200]).unwrap();
+        File::create(tmp.path().join("a/one"))
+            .unwrap()
+            .write_all(&[0u8; 100])
+            .unwrap();
+        File::create(tmp.path().join("a/b/two"))
+            .unwrap()
+            .write_all(&[0u8; 200])
+            .unwrap();
 
         let c = stat_dir(tmp.path());
         assert_eq!(c.size_bytes, 300);
@@ -151,9 +199,13 @@ mod tests {
         let new = tmp.path().join("new");
         File::create(&new).unwrap().write_all(&[0u8; 10]).unwrap();
         let later = std::time::SystemTime::now() + std::time::Duration::from_secs(60);
-        filetime::set_file_mtime(&old, filetime::FileTime::from_system_time(
-            std::time::SystemTime::now() - std::time::Duration::from_secs(86_400),
-        )).ok();
+        filetime::set_file_mtime(
+            &old,
+            filetime::FileTime::from_system_time(
+                std::time::SystemTime::now() - std::time::Duration::from_secs(86_400),
+            ),
+        )
+        .ok();
         filetime::set_file_mtime(&new, filetime::FileTime::from_system_time(later)).ok();
 
         let c = stat_dir(tmp.path());
@@ -171,9 +223,13 @@ mod tests {
         // file's recent mtime wins.
         let old = tmp.path().join("old");
         File::create(&old).unwrap().write_all(&[0u8; 1]).unwrap();
-        filetime::set_file_mtime(&old, filetime::FileTime::from_system_time(
-            std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(60),
-        )).ok();
+        filetime::set_file_mtime(
+            &old,
+            filetime::FileTime::from_system_time(
+                std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(60),
+            ),
+        )
+        .ok();
 
         let hidden = tmp.path().join(".lock");
         File::create(&hidden).unwrap().write_all(&[0u8; 1]).unwrap();
@@ -183,16 +239,19 @@ mod tests {
         let c = stat_dir(tmp.path());
         let nm = c.newest_mtime.expect("expected a newest_mtime");
         // newest_mtime is from the hidden file (today), not the visible 1970 one.
-        assert!(nm > std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(3600 * 24 * 365));
+        assert!(
+            nm > std::time::SystemTime::UNIX_EPOCH
+                + std::time::Duration::from_secs(3600 * 24 * 365)
+        );
     }
 
     #[test]
-    fn label_strips_leading_dot() {
+    fn label_preserves_leading_dot() {
         let tmp = tempfile::tempdir().unwrap();
         let hidden = tmp.path().join(".npm");
         fs::create_dir(&hidden).unwrap();
         let c = stat_dir(&hidden);
-        assert_eq!(c.label, "npm");
+        assert_eq!(c.label, ".npm");
     }
 
     #[test]
@@ -200,7 +259,10 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         fs::create_dir(tmp.path().join("alpha")).unwrap();
         fs::create_dir(tmp.path().join("beta")).unwrap();
-        File::create(tmp.path().join("alpha/file")).unwrap().write_all(&[0u8; 50]).unwrap();
+        File::create(tmp.path().join("alpha/file"))
+            .unwrap()
+            .write_all(&[0u8; 50])
+            .unwrap();
 
         let mut caches = super::enumerate_seed(tmp.path());
         caches.sort_by(|a, b| a.label.cmp(&b.label));
@@ -231,7 +293,11 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         fs::create_dir_all(tmp.path()).unwrap();
         for i in 0..100 {
-            fs::write(tmp.path().join(format!("f{:03}", i)), vec![0u8; (i + 1) as usize]).unwrap();
+            fs::write(
+                tmp.path().join(format!("f{:03}", i)),
+                vec![0u8; (i + 1) as usize],
+            )
+            .unwrap();
         }
         let c = stat_dir(tmp.path());
         assert_eq!(c.top_files.len(), 64);

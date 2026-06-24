@@ -25,6 +25,11 @@ pub enum Effect {
 
     /// Wait `dur`, then dispatch `msg` into the loop.
     EmitAfter { dur: Duration, msg: Msg },
+
+    /// Run the top-level seed scan that populates the initial cache list.
+    /// On completion: `Msg::SeedsLoaded`.  Dispatched once at startup so the
+    /// TUI is already drawn (with a spinner) while this work happens.
+    LoadSeeds { seeds: Vec<PathBuf> },
 }
 
 #[cfg(test)]

@@ -12,7 +12,10 @@ fn collect_then_delete_marked_removes_dirs() {
     fs::create_dir(&cache_root).unwrap();
     let target = cache_root.join("victim");
     fs::create_dir(&target).unwrap();
-    File::create(target.join("blob")).unwrap().write_all(&[0u8; 1024]).unwrap();
+    File::create(target.join("blob"))
+        .unwrap()
+        .write_all(&[0u8; 1024])
+        .unwrap();
 
     let mut caches = scan::collect(std::slice::from_ref(&cache_root));
     assert_eq!(caches.len(), 1);

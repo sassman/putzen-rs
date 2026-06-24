@@ -16,22 +16,21 @@ pub fn key_to_msg(k: KeyEvent, modal: ModalKind, focus_right: bool) -> Option<Ms
     match modal {
         ModalKind::DeleteConfirm => match (k.code, k.modifiers) {
             (Char('y'), KeyModifiers::NONE) | (Enter, _) => Some(Msg::ConfirmDelete),
-            (Char('n'), KeyModifiers::NONE) | (Esc, _)   => Some(Msg::CancelDelete),
+            (Char('n'), KeyModifiers::NONE) | (Esc, _) => Some(Msg::CancelDelete),
             _ => None,
         },
         ModalKind::ActiveMark => match (k.code, k.modifiers) {
             (Char('y'), KeyModifiers::NONE) | (Enter, _) => Some(Msg::ConfirmActiveMark),
-            (Char('n'), KeyModifiers::NONE) | (Esc, _)   => Some(Msg::CancelActiveMark),
+            (Char('n'), KeyModifiers::NONE) | (Esc, _) => Some(Msg::CancelActiveMark),
             _ => None,
         },
         ModalKind::FilterEdit => match (k.code, k.modifiers) {
-            (Enter, _)     => Some(Msg::FilterApply),
-            (Esc, _)       => Some(Msg::FilterCancel),
+            (Enter, _) => Some(Msg::FilterApply),
+            (Esc, _) => Some(Msg::FilterCancel),
             (Backspace, _) => Some(Msg::FilterBackspace),
             // Accept printable chars with NONE or SHIFT modifiers (uppercase).
             (Char(c), m)
-                if (m == KeyModifiers::NONE || m == KeyModifiers::SHIFT)
-                && !c.is_control() =>
+                if (m == KeyModifiers::NONE || m == KeyModifiers::SHIFT) && !c.is_control() =>
             {
                 Some(Msg::FilterChar(c))
             }
@@ -40,7 +39,7 @@ pub fn key_to_msg(k: KeyEvent, modal: ModalKind, focus_right: bool) -> Option<Ms
         ModalKind::None if focus_right => match (k.code, k.modifiers) {
             // Right pane focus: only the file-list scrollers + focus toggle
             // + quit are live. Mark/sort/drill/delete are out of scope here.
-            (Up, _)   | (Char('k'), KeyModifiers::NONE) => Some(Msg::MoveUp),
+            (Up, _) | (Char('k'), KeyModifiers::NONE) => Some(Msg::MoveUp),
             (Down, _) | (Char('j'), KeyModifiers::NONE) => Some(Msg::MoveDown),
             (Tab, _) | (BackTab, _) | (Esc, _) => Some(Msg::ToggleFocus),
             (Char('q'), KeyModifiers::NONE) => Some(Msg::RequestQuit),
@@ -50,7 +49,9 @@ pub fn key_to_msg(k: KeyEvent, modal: ModalKind, focus_right: bool) -> Option<Ms
             (Up, _) | (Char('k'), KeyModifiers::NONE) => Some(Msg::MoveUp),
             (Down, _) | (Char('j'), KeyModifiers::NONE) => Some(Msg::MoveDown),
             (Right, _) | (Char('l'), KeyModifiers::NONE) | (Enter, _) => Some(Msg::DrillIn),
-            (Left, _) | (Char('h'), KeyModifiers::NONE) | (Esc, _) | (Backspace, _) => Some(Msg::DrillOut),
+            (Left, _) | (Char('h'), KeyModifiers::NONE) | (Esc, _) | (Backspace, _) => {
+                Some(Msg::DrillOut)
+            }
             (Char(' '), _) => Some(Msg::ToggleMark),
             (Char('m'), KeyModifiers::NONE) => Some(Msg::MarkDownToCursor),
             (Char('s'), KeyModifiers::NONE) => Some(Msg::CycleSort),
@@ -75,51 +76,96 @@ mod tests {
 
     #[test]
     fn arrows_map_to_movement() {
-        assert!(matches!(key_to_msg(k(KeyCode::Up), ModalKind::None, false), Some(Msg::MoveUp)));
-        assert!(matches!(key_to_msg(k(KeyCode::Down), ModalKind::None, false), Some(Msg::MoveDown)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Up), ModalKind::None, false),
+            Some(Msg::MoveUp)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Down), ModalKind::None, false),
+            Some(Msg::MoveDown)
+        ));
     }
     #[test]
     fn vim_keys_map_to_movement() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('j')), ModalKind::None, false), Some(Msg::MoveDown)));
-        assert!(matches!(key_to_msg(k(KeyCode::Char('k')), ModalKind::None, false), Some(Msg::MoveUp)));
-        assert!(matches!(key_to_msg(k(KeyCode::Char('l')), ModalKind::None, false), Some(Msg::DrillIn)));
-        assert!(matches!(key_to_msg(k(KeyCode::Char('h')), ModalKind::None, false), Some(Msg::DrillOut)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('j')), ModalKind::None, false),
+            Some(Msg::MoveDown)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('k')), ModalKind::None, false),
+            Some(Msg::MoveUp)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('l')), ModalKind::None, false),
+            Some(Msg::DrillIn)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('h')), ModalKind::None, false),
+            Some(Msg::DrillOut)
+        ));
     }
     #[test]
     fn enter_is_drill_in() {
-        assert!(matches!(key_to_msg(k(KeyCode::Enter), ModalKind::None, false), Some(Msg::DrillIn)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Enter), ModalKind::None, false),
+            Some(Msg::DrillIn)
+        ));
     }
     #[test]
     fn esc_is_drill_out() {
-        assert!(matches!(key_to_msg(k(KeyCode::Esc), ModalKind::None, false), Some(Msg::DrillOut)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Esc), ModalKind::None, false),
+            Some(Msg::DrillOut)
+        ));
     }
     #[test]
     fn backspace_is_drill_out() {
-        assert!(matches!(key_to_msg(k(KeyCode::Backspace), ModalKind::None, false), Some(Msg::DrillOut)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Backspace), ModalKind::None, false),
+            Some(Msg::DrillOut)
+        ));
     }
     #[test]
     fn q_requests_quit() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('q')), ModalKind::None, false), Some(Msg::RequestQuit)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('q')), ModalKind::None, false),
+            Some(Msg::RequestQuit)
+        ));
     }
     #[test]
     fn d_in_normal_mode_requests_delete() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('d')), ModalKind::None, false), Some(Msg::DeletePressed)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('d')), ModalKind::None, false),
+            Some(Msg::DeletePressed)
+        ));
     }
     #[test]
     fn y_in_modal_confirms_delete() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('y')), ModalKind::DeleteConfirm, false), Some(Msg::ConfirmDelete)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('y')), ModalKind::DeleteConfirm, false),
+            Some(Msg::ConfirmDelete)
+        ));
     }
     #[test]
     fn n_in_modal_cancels_delete() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('n')), ModalKind::DeleteConfirm, false), Some(Msg::CancelDelete)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('n')), ModalKind::DeleteConfirm, false),
+            Some(Msg::CancelDelete)
+        ));
     }
     #[test]
     fn y_in_active_modal_confirms_active_mark() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('y')), ModalKind::ActiveMark, false), Some(Msg::ConfirmActiveMark)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('y')), ModalKind::ActiveMark, false),
+            Some(Msg::ConfirmActiveMark)
+        ));
     }
     #[test]
     fn n_in_active_modal_cancels_active_mark() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('n')), ModalKind::ActiveMark, false), Some(Msg::CancelActiveMark)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('n')), ModalKind::ActiveMark, false),
+            Some(Msg::CancelActiveMark)
+        ));
     }
 
     #[test]
@@ -135,29 +181,65 @@ mod tests {
 
     #[test]
     fn slash_starts_filter() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('/')), ModalKind::None, false), Some(Msg::FilterStart)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('/')), ModalKind::None, false),
+            Some(Msg::FilterStart)
+        ));
     }
 
     #[test]
     fn star_marks_all_visible() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('*')), ModalKind::None, false), Some(Msg::MarkAllVisible)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('*')), ModalKind::None, false),
+            Some(Msg::MarkAllVisible)
+        ));
     }
 
     #[test]
     fn filter_edit_routes_text_input() {
-        assert!(matches!(key_to_msg(k(KeyCode::Char('a')), ModalKind::FilterEdit, false), Some(Msg::FilterChar('a'))));
-        assert!(matches!(key_to_msg(k(KeyCode::Backspace), ModalKind::FilterEdit, false), Some(Msg::FilterBackspace)));
-        assert!(matches!(key_to_msg(k(KeyCode::Enter),     ModalKind::FilterEdit, false), Some(Msg::FilterApply)));
-        assert!(matches!(key_to_msg(k(KeyCode::Esc),       ModalKind::FilterEdit, false), Some(Msg::FilterCancel)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('a')), ModalKind::FilterEdit, false),
+            Some(Msg::FilterChar('a'))
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Backspace), ModalKind::FilterEdit, false),
+            Some(Msg::FilterBackspace)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Enter), ModalKind::FilterEdit, false),
+            Some(Msg::FilterApply)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Esc), ModalKind::FilterEdit, false),
+            Some(Msg::FilterCancel)
+        ));
     }
 
     #[test]
     fn right_focus_keeps_movement_focus_quit() {
-        assert!(matches!(key_to_msg(k(KeyCode::Up),         ModalKind::None, true), Some(Msg::MoveUp)));
-        assert!(matches!(key_to_msg(k(KeyCode::Down),       ModalKind::None, true), Some(Msg::MoveDown)));
-        assert!(matches!(key_to_msg(k(KeyCode::Tab),        ModalKind::None, true), Some(Msg::ToggleFocus)));
-        assert!(matches!(key_to_msg(k(KeyCode::BackTab),    ModalKind::None, true), Some(Msg::ToggleFocus)));
-        assert!(matches!(key_to_msg(k(KeyCode::Esc),        ModalKind::None, true), Some(Msg::ToggleFocus)));
-        assert!(matches!(key_to_msg(k(KeyCode::Char('q')),  ModalKind::None, true), Some(Msg::RequestQuit)));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Up), ModalKind::None, true),
+            Some(Msg::MoveUp)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Down), ModalKind::None, true),
+            Some(Msg::MoveDown)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Tab), ModalKind::None, true),
+            Some(Msg::ToggleFocus)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::BackTab), ModalKind::None, true),
+            Some(Msg::ToggleFocus)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Esc), ModalKind::None, true),
+            Some(Msg::ToggleFocus)
+        ));
+        assert!(matches!(
+            key_to_msg(k(KeyCode::Char('q')), ModalKind::None, true),
+            Some(Msg::RequestQuit)
+        ));
     }
 }

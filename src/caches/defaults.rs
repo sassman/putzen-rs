@@ -49,7 +49,7 @@ macro_rules! roots {
 
 pub struct DefaultRoot {
     pub label: &'static str,
-    pub path:  &'static str, // HOME-relative unless it begins with '/'
+    pub path: &'static str, // HOME-relative unless it begins with '/'
 }
 
 /// Strip leading ASCII spaces from a `///` doc string at compile time.
@@ -209,7 +209,7 @@ mod tests {
         ];
         assert_eq!(SAMPLE.len(), 1);
         assert_eq!(SAMPLE[0].label, "cargo registry");
-        assert_eq!(SAMPLE[0].path,  ".cargo/registry/cache");
+        assert_eq!(SAMPLE[0].path, ".cargo/registry/cache");
     }
 
     #[test]
@@ -223,9 +223,9 @@ mod tests {
             ".c",
         ];
         let labels: Vec<_> = SAMPLE.iter().map(|r| r.label).collect();
-        let paths:  Vec<_> = SAMPLE.iter().map(|r| r.path).collect();
+        let paths: Vec<_> = SAMPLE.iter().map(|r| r.path).collect();
         assert_eq!(labels, ["alpha", "beta", "gamma"]);
-        assert_eq!(paths,  [".a", ".b", ".c"]);
+        assert_eq!(paths, [".a", ".b", ".c"]);
     }
 
     #[test]

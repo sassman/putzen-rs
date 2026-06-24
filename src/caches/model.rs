@@ -37,18 +37,26 @@ impl Cache {
     /// Score: (size_MB) × (age_days). 0.0 for empty caches.
     pub fn score(&self, now: SystemTime) -> f64 {
         let Some(age) = self.age(now) else { return 0.0 };
-        let mb   = self.size_bytes as f64 / 1_048_576.0;
+        let mb = self.size_bytes as f64 / 1_048_576.0;
         let days = age.as_secs_f64() / 86_400.0;
         mb * days
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum Sort { Score, Size, Age }
+pub enum Sort {
+    Score,
+    Size,
+    Age,
+}
 
 impl Sort {
     pub fn next(self) -> Sort {
-        match self { Sort::Score => Sort::Size, Sort::Size => Sort::Age, Sort::Age => Sort::Score }
+        match self {
+            Sort::Score => Sort::Size,
+            Sort::Size => Sort::Age,
+            Sort::Age => Sort::Score,
+        }
     }
 }
 
@@ -59,11 +67,25 @@ pub struct MarkSet {
 }
 
 impl MarkSet {
-    pub fn toggle(&mut self, i: usize) { if !self.marked.insert(i) { self.marked.remove(&i); } }
-    pub fn mark_down_to(&mut self, last: usize) { for i in 0..=last { self.marked.insert(i); } }
-    pub fn clear(&mut self) { self.marked.clear(); }
-    pub fn is_marked(&self, i: usize) -> bool { self.marked.contains(&i) }
-    pub fn count(&self) -> usize { self.marked.len() }
+    pub fn toggle(&mut self, i: usize) {
+        if !self.marked.insert(i) {
+            self.marked.remove(&i);
+        }
+    }
+    pub fn mark_down_to(&mut self, last: usize) {
+        for i in 0..=last {
+            self.marked.insert(i);
+        }
+    }
+    pub fn clear(&mut self) {
+        self.marked.clear();
+    }
+    pub fn is_marked(&self, i: usize) -> bool {
+        self.marked.contains(&i)
+    }
+    pub fn count(&self) -> usize {
+        self.marked.len()
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -92,8 +114,10 @@ mod tests {
             path: PathBuf::from("/tmp/x"),
             size_bytes: size,
             newest_mtime: Some(at(mtime_secs)),
-            file_count: 1, dir_count: 0,
-            top_files: Vec::new(), unreadable: 0,
+            file_count: 1,
+            dir_count: 0,
+            top_files: Vec::new(),
+            unreadable: 0,
         }
     }
 
@@ -114,15 +138,17 @@ mod tests {
     #[test]
     fn sort_cycles() {
         assert_eq!(Sort::Score.next(), Sort::Size);
-        assert_eq!(Sort::Size.next(),  Sort::Age);
-        assert_eq!(Sort::Age.next(),   Sort::Score);
+        assert_eq!(Sort::Size.next(), Sort::Age);
+        assert_eq!(Sort::Age.next(), Sort::Score);
     }
 
     #[test]
     fn markset_toggle_inserts_and_removes() {
         let mut m = MarkSet::default();
-        m.toggle(3); assert!(m.is_marked(3));
-        m.toggle(3); assert!(!m.is_marked(3));
+        m.toggle(3);
+        assert!(m.is_marked(3));
+        m.toggle(3);
+        assert!(!m.is_marked(3));
     }
 
     #[test]
@@ -130,12 +156,16 @@ mod tests {
         let mut m = MarkSet::default();
         m.mark_down_to(2);
         assert_eq!(m.count(), 3);
-        for i in 0..=2 { assert!(m.is_marked(i)); }
+        for i in 0..=2 {
+            assert!(m.is_marked(i));
+        }
     }
 
     #[test]
     fn floor_active_when_cold_less_than_floor() {
-        let p = FloorPolicy { floor: Duration::from_secs(7 * 86_400) };
+        let p = FloorPolicy {
+            floor: Duration::from_secs(7 * 86_400),
+        };
         assert!(p.is_active(Some(Duration::from_secs(86_400))));
         assert!(!p.is_active(Some(Duration::from_secs(30 * 86_400))));
         assert!(!p.is_active(None));

@@ -176,7 +176,7 @@ struct PutzenCliArgs {
 #[derive(FromArgs)]
 /// interactive cleanup of user-level cache directories
 struct CachesCliArgs {
-    /// add a scan root (repeatable, augments built-in seeds)
+    /// scan root (repeatable). When given, REPLACES the built-in defaults.
     #[argh(option)]
     root: Vec<PathBuf>,
     /// caches whose newest file is younger than this are flagged ACTIVE
@@ -204,10 +204,10 @@ fn main() -> Result<()> {
             }
         };
         return caches::run(caches::CachesArgs {
-            roots:   parsed.root,
-            floor:   parsed.floor,
+            roots: parsed.root,
+            floor: parsed.floor,
             dry_run: parsed.dry_run,
-            yes:     parsed.yes,
+            yes: parsed.yes,
         });
     }
 

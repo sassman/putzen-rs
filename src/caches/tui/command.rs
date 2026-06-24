@@ -12,15 +12,24 @@ pub struct Command<E, M> {
 
 impl<E, M> Command<E, M> {
     pub fn done() -> Self {
-        Self { events: Vec::new(), effects: Vec::new() }
+        Self {
+            events: Vec::new(),
+            effects: Vec::new(),
+        }
     }
 
     pub fn event(m: M) -> Self {
-        Self { events: vec![m], effects: Vec::new() }
+        Self {
+            events: vec![m],
+            effects: Vec::new(),
+        }
     }
 
     pub fn effect(e: E) -> Self {
-        Self { events: Vec::new(), effects: vec![e] }
+        Self {
+            events: Vec::new(),
+            effects: vec![e],
+        }
     }
 
     pub fn batch<I: IntoIterator<Item = Self>>(cmds: I) -> Self {
@@ -48,9 +57,15 @@ mod tests {
     use super::*;
 
     #[derive(Debug, PartialEq, Eq, Clone)]
-    enum E { A, B }
+    enum E {
+        A,
+        B,
+    }
     #[derive(Debug, PartialEq, Eq, Clone)]
-    enum M { X, Y }
+    enum M {
+        X,
+        Y,
+    }
 
     #[test]
     fn done_is_empty() {

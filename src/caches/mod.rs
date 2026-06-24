@@ -17,19 +17,14 @@ pub struct CachesArgs {
 }
 
 pub fn run(args: CachesArgs) -> io::Result<()> {
-    use std::time::{Duration, SystemTime};
+    use std::time::{Duration, Instant, SystemTime};
 
     let home = std::env::var_os("HOME")
         .map(PathBuf::from)
         .ok_or_else(|| io::Error::other("HOME is not set"))?;
 
-    // Build the seed set: defaults + --root overrides.
-    let mut seeds: Vec<PathBuf> = defaults::defaults()
-        .map(|r| resolve_path(&home, r.path))
-        .collect();
-    seeds.extend(args.roots.iter().cloned());
+    let seeds = select_seeds(&home, &args.roots);
 
-    let caches = scan::collect(&seeds);
     let floor = args
         .floor
         .as_deref()
@@ -38,9 +33,12 @@ pub fn run(args: CachesArgs) -> io::Result<()> {
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?
         .unwrap_or(Duration::from_secs(7 * 86_400));
 
+    // Start with an empty list + a visible spinner.  The actual seed scan
+    // runs on a worker (Effect::LoadSeeds) so the TUI is responsive
+    // immediately even when HOME contains huge cache trees.
     let state = tui::State {
         now: SystemTime::now(),
-        all: caches,
+        all: Vec::new(),
         sort: model::Sort::Score,
         marks: model::MarkSet::default(),
         cursor: 0,
@@ -55,14 +53,22 @@ pub fn run(args: CachesArgs) -> io::Result<()> {
         yes_mode: args.yes,
         total_freed: 0,
         filter: None,
-        loading: None,
+        loading: Some(tui::Loading {
+            label: "scanning folders".into(),
+            frame: 0,
+            started: Instant::now(),
+            folders: Some(0),
+        }),
         overlay: None,
         level_dirty: false,
         drill_paths: Vec::new(),
+        cursor_stack: Vec::new(),
     };
 
+    let initial_effects = vec![tui::Effect::LoadSeeds { seeds }];
+
     let mut term = tui::enter_tui()?;
-    let loop_result = tui::run_loop(&mut term, state);
+    let loop_result = tui::run_loop(&mut term, state, initial_effects);
     let (final_state, total_freed) = match loop_result {
         Ok(out) => out,
         Err(e) => {
@@ -129,6 +135,20 @@ pub fn resolve_path(home: &std::path::Path, raw: &str) -> std::path::PathBuf {
     }
 }
 
+/// Pick the seed set for the scan: `--root` values when given, otherwise
+/// the built-in defaults resolved against `home`. The two are alternatives
+/// rather than complementary — passing `--root` is the user telling us
+/// "scan this tree, not the usual ones".
+pub fn select_seeds(home: &std::path::Path, roots: &[PathBuf]) -> Vec<PathBuf> {
+    if roots.is_empty() {
+        defaults::defaults()
+            .map(|r| resolve_path(home, r.path))
+            .collect()
+    } else {
+        roots.to_vec()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,5 +170,24 @@ mod tests {
             resolve_path(&home, "/var/cache"),
             PathBuf::from("/var/cache")
         );
+    }
+
+    #[test]
+    fn select_seeds_no_roots_uses_defaults() {
+        let home = PathBuf::from("/u/sven");
+        let seeds = select_seeds(&home, &[]);
+        assert!(!seeds.is_empty(), "default seeds must be populated");
+        assert!(
+            seeds.iter().any(|p| p.starts_with(&home)),
+            "default seeds resolve under $HOME"
+        );
+    }
+
+    #[test]
+    fn select_seeds_with_roots_replaces_defaults() {
+        let home = PathBuf::from("/u/sven");
+        let roots = vec![PathBuf::from("/tmp/scratch"), PathBuf::from("/var/cache")];
+        let seeds = select_seeds(&home, &roots);
+        assert_eq!(seeds, roots, "--root replaces, never extends");
     }
 }

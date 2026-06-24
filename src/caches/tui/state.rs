@@ -18,6 +18,8 @@ pub struct Overlay {
 pub struct RunOutcome {
     pub freed: u64,
     pub deleted: usize,
+    /// Items the cleaner returned an `Err` for. `0` on dry runs.
+    pub failed: usize,
     pub dry_run: bool,
 }
 
@@ -27,8 +29,13 @@ pub struct Loading {
     pub label: String,
     /// Spinner animation frame index into `SPINNER_FRAMES`.
     pub frame: usize,
-    /// When the scan started; used to render elapsed time.
+    /// When the scan started; used to render elapsed time when no per-task
+    /// progress signal is available.
     pub started: std::time::Instant,
+    /// `Some(n)` when the worker streams a folder-count via `ScanProgress`
+    /// (the LoadSeeds startup scan). `None` for spinners that don't carry a
+    /// progress signal, in which case the view falls back to elapsed time.
+    pub folders: Option<usize>,
 }
 
 impl Loading {
@@ -47,7 +54,6 @@ impl Loading {
 pub enum Modal {
     #[default]
     None,
-    QuitConfirm,
     DeleteConfirm,
     ActiveMark(Vec<usize>),
     FilterEdit,
@@ -88,6 +94,10 @@ pub struct State {
     /// restored parent corresponds to the cache we just drilled out of.
     /// Pushed on `drill_into`, popped on `drill_out`.
     pub drill_paths: Vec<PathBuf>,
+    /// Cursor positions parallel to `stack`. On `drill_into` we save the
+    /// current cursor; on `drill_out` we restore it (then clamp), so the
+    /// user lands back on the row they were on instead of at the top.
+    pub cursor_stack: Vec<usize>,
 }
 
 impl State {
@@ -129,6 +139,7 @@ impl State {
 
     pub fn drill_into(&mut self, children: Vec<Cache>) {
         let parent = std::mem::replace(&mut self.all, children);
+        self.cursor_stack.push(self.cursor);
         self.stack.push(parent);
         self.cursor = 0;
         self.marks.clear(); // marks are index-keyed; reset on level change
@@ -143,14 +154,20 @@ impl State {
     /// left (for the event loop to trigger a refresh). Returns `None`
     /// when already at the top level.
     pub fn drill_out_with_path(&mut self) -> Option<PathBuf> {
-        let popped_path = self.drill_paths.pop();
+        // Only pop drill_paths / cursor_stack when we actually pop the
+        // stack — otherwise calling drill_out twice at the top level would
+        // silently desync them from stack.len().
         if let Some(parent) = self.stack.pop() {
             self.all = parent;
-            self.cursor = 0;
+            // Restore the cursor the user had when they drilled in. Clamp
+            // against the new visible set in case a refresh shifted things.
+            self.cursor = self.cursor_stack.pop().unwrap_or(0);
             self.marks.clear();
             self.stack_labels.pop();
             self.level_dirty = false;
-            popped_path
+            let popped = self.drill_paths.pop();
+            self.clamp_cursor_to_visible();
+            popped
         } else {
             None
         }
