@@ -7,6 +7,7 @@ use argh::FromArgs;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use jwalk::Parallelism;
 
+use putzen_cli::caches;
 use putzen_cli::{
     DecisionContext, DoCleanUp, DryRunCleaner, FileToFolderMatch, Folder, FolderProcessed,
     HumanReadable, IsFolderToRemove, NiceInteractiveDecider, NoOpObserver, ProperCleaner,
@@ -172,7 +173,44 @@ struct PutzenCliArgs {
     folder: PathBuf,
 }
 
+#[derive(FromArgs)]
+/// interactive cleanup of user-level cache directories
+struct CachesCliArgs {
+    /// scan root (repeatable). When given, REPLACES the built-in defaults.
+    #[argh(option)]
+    root: Vec<PathBuf>,
+    /// caches whose newest file is younger than this are flagged ACTIVE
+    #[argh(option)]
+    floor: Option<String>,
+    /// dry run: never delete, just show what would happen
+    #[argh(switch)]
+    dry_run: bool,
+    /// skip the deletion confirmation modal
+    #[argh(switch, short = 'y')]
+    yes: bool,
+}
+
 fn main() -> Result<()> {
+    let raw: Vec<String> = std::env::args().collect();
+
+    // Route to the caches subcommand before letting argh consume positionals.
+    if raw.get(1).map(String::as_str) == Some("caches") {
+        let rest: Vec<&str> = raw[2..].iter().map(|s| s.as_str()).collect();
+        let parsed = match CachesCliArgs::from_args(&["putzen caches"], &rest) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("{}", e.output);
+                std::process::exit(if e.status.is_ok() { 0 } else { 1 });
+            }
+        };
+        return caches::run(caches::CachesArgs {
+            roots: parsed.root,
+            floor: parsed.floor,
+            dry_run: parsed.dry_run,
+            yes: parsed.yes,
+        });
+    }
+
     let args: PutzenCliArgs = argh::from_env();
     if args.version {
         println!("{} {}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
