@@ -13,6 +13,14 @@
 
 </div>
 
+### New: `putzen caches`
+
+Interactive TUI for cleaning user-level tool caches (`~/.cargo`, `~/.npm`, `~/.cache/huggingface`, …). Browse, mark, drill in, delete — in one screen.
+
+![caches demo](resources/caches-demo.gif)
+
+[Higher-quality MP4](resources/caches-demo.mp4)
+
 ## About 
 
 In short, putzen solves the problem of cleaning up build or dependency artifacts.
@@ -96,6 +104,25 @@ Options:
   --help, help      display usage information
 ```
 
+For the interactive cache-cleaning TUI, run `putzen caches`:
+
+```sh
+$ putzen caches --help
+
+Usage: putzen caches [--root <root...>] [--floor <floor>] [--dry-run] [-y]
+
+interactive cleanup of user-level cache directories
+
+Options:
+  --root            scan root (repeatable). When given, REPLACES the built-in
+                    defaults.
+  --floor           caches whose newest file is younger than this are flagged
+                    ACTIVE
+  --dry-run         dry run: never delete, just show what would happen
+  -y, --yes         skip the deletion confirmation modal
+  --help, help      display usage information
+```
+
 ### Hidden directories
 
 `putzen` skips hidden directories by default, **except for `.worktrees`** —
@@ -137,6 +164,27 @@ Every putzen run earns you a little reward. The biggest single cleanup and the b
    ────────────────────────────
 ```
 
+### Caches
+
+`putzen caches` scans known tool-cache locations under `$HOME` (cargo, npm, pnpm, yarn, bun, uv, pip, huggingface, gradle, ivy, …) and presents them as a ranked list. You browse with arrow keys, drill into a cache to see its children, mark anything to delete with `Space`, and confirm with `d` + `y`.
+
+Pass `--root <dir>` to scan a tree of your choosing instead of the built-in defaults.
+
+#### The score
+
+Each cache gets a single number that ranks "how much disk this is wasting *right now*":
+
+```
+score = size_MiB × age_days
+```
+
+- **size_MiB** — total size of the cache directory.
+- **age_days** — days since its newest file was last touched.
+
+The intuition: a 5 GiB cache you used yesterday is probably still useful; a 200 MiB cache untouched for a year is dead weight, and the score keeps it visible. The right-pane heatmap bar is `score / max_score` — the heaviest cache in your visible set is full-red, everything else scales down through orange to green.
+
+The `--floor <duration>` flag (e.g. `--floor 14d`) marks caches younger than that threshold as **ACTIVE** — marking them for deletion needs an extra confirmation modal so a fresh cache you're still using doesn't disappear by accident. Default floor: 7 days.
+
 ## Alternative Projects
 
 - [kondo](https://github.com/tbillington/kondo)
@@ -144,5 +192,5 @@ Every putzen run earns you a little reward. The biggest single cleanup and the b
 ## License
 
 - **[GNU GPL v3 license](https://www.gnu.org/licenses/gpl-3.0)**
-- Copyright 2019 - 2023 © [Sven Kanoldt](https://d34dl0ck.me)
+- Copyright 2019 - 2026 © [Sven Kanoldt](https://d34dl0ck.me)
 - Logo - [Clean icons created by photo3idea_studio - Flaticon](https://www.flaticon.com/free-icons/clean)
