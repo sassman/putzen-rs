@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 mod cleaner;
 mod decider;
 #[cfg(feature = "highscore-board")]
@@ -284,3 +286,5 @@ mod tests {
         assert!(!rule.is_folder_to_remove(&crate_root_folder));
     }
 }
+
+pub mod caches;
