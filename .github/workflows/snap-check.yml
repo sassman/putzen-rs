@@ -44,8 +44,12 @@ jobs:
         id: build
         uses: snapcore/action-build@v1
 
+      # `snapcraft lint` spins up a craft-providers LXD instance — that
+      # needs the `lxd` group on the current shell.  snapcore/action-build
+      # adds the runner to the group, but membership only takes effect for
+      # a fresh login; `sg` opens one for this single command.
       - name: lint built snap
-        run: snapcraft lint ${{ steps.build.outputs.snap }}
+        run: sg lxd -c "snapcraft lint ${{ steps.build.outputs.snap }}"
 
       # Hand the artefact to anyone reviewing the PR for local install with
       # `sudo snap install --classic --dangerous ./<file>.snap`.
