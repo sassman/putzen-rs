@@ -1,0 +1,57 @@
+name: Snap Check
+
+# Validate snap/snapcraft.yaml on every PR and main push.  Catches manifest
+# regressions before they show up at release time.  Runs only when the
+# snap config or this workflow itself changes, to keep CI quiet on
+# day-to-day commits that have no chance of breaking the manifest.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "snap/**"
+      - ".github/workflows/snap-check.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "snap/**"
+      - ".github/workflows/snap-check.yml"
+  workflow_dispatch:
+
+jobs:
+  manifest:
+    name: validate snapcraft.yaml schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: schema-validate the manifest
+        run: snapcraft expand-extensions
+
+  build-and-lint:
+    name: build snap + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: build snap
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: lint built snap
+        run: snapcraft lint ${{ steps.build.outputs.snap }}
+
+      # Hand the artefact to anyone reviewing the PR for local install with
+      # `sudo snap install --classic --dangerous ./<file>.snap`.
+      - name: upload built snap as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap-build-${{ github.sha }}
+          path: ${{ steps.build.outputs.snap }}
+          retention-days: 14
