@@ -24,7 +24,7 @@ jobs:
     needs: doing-a-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: setup | rust
         uses: dtolnay/rust-toolchain@stable
       - uses: katyo/publish-crates@v1
@@ -37,7 +37,7 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: setup | rust
         uses: dtolnay/rust-toolchain@stable
       - name: Get version from tag

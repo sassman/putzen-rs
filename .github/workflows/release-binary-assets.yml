@@ -33,7 +33,7 @@ jobs:
             cross: false
             binName: putzen.exe
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: setup | rust
         uses: dtolnay/rust-toolchain@stable
         with:

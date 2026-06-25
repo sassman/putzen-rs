@@ -1,0 +1,50 @@
+name: Snap Publish
+
+# Triggered automatically by release tags (mirrors the cargo / GitHub release
+# path) AND manually from the Actions tab with a specific tag, so you can
+# rebuild and re-promote an existing release without cutting a new one.
+#
+# Re-running for a tag whose snap is already on stable is safe: snapcraft
+# upload creates a new revision and points stable at it — older revs stay
+# accessible by number, nothing on the store is overwritten or deleted.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]-alpha.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]-beta.[0-9]+"
+    paths-ignore:
+      - "**/docs/**"
+      - "**.md"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag to build and publish (e.g. v3.3.0)"
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: build + push snap to stable
+    runs-on: ubuntu-latest
+    steps:
+      # snap/snapcraft.yaml uses `git describe --tags` for adopt-info,
+      # which needs the full tag history — shallow clone breaks the version.
+      # On manual runs check out the requested tag; on push the tag ref
+      # is already what got us here.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: build snap
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: publish to stable
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: stable
