@@ -1,0 +1,36 @@
+name: Snap Publish
+
+# Tag-triggered so it mirrors the cargo publish / GitHub release path:
+# one git tag → cargo crate + GitHub release + snap on the stable channel.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]-alpha.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]-beta.[0-9]+"
+    paths-ignore:
+      - "**/docs/**"
+      - "**.md"
+
+jobs:
+  publish:
+    name: build + push snap to stable
+    runs-on: ubuntu-latest
+    steps:
+      # snap/snapcraft.yaml uses `git describe --tags` for adopt-info,
+      # which needs the full tag history — shallow clone breaks the version.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: build snap
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: publish to stable
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: stable
