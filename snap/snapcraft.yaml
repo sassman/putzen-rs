@@ -7,7 +7,17 @@ description: |
   It helps keeping your disk clean of build and dependency artifacts safely.
 
 grade: stable
-confinement: strict
+# Classic confinement is required because putzen reads and deletes
+# user cache directories (.cargo, .npm, .cache/huggingface, …) and
+# accepts arbitrary --root paths.  The default `home` interface
+# explicitly hides dot-files / dot-directories, which is exactly
+# the set putzen needs to see — so strict confinement leaves every
+# cache row stubbed out as empty. Other disk-tool snaps (kondo,
+# dust, ncdu, tealdeer) sit on classic for the same reason.
+#
+# Publishing classic snaps requires a one-off store review request:
+#   https://forum.snapcraft.io/c/store-requests/19
+confinement: classic
 
 parts:
   putzen:
@@ -20,5 +30,3 @@ parts:
 apps:
   putzen:
     command: bin/putzen
-    plugs:
-      - home
